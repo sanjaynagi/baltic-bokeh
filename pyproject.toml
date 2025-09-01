@@ -9,10 +9,7 @@ description = "Interactive phylogenetic tree visualization using Bokeh and Balti
 readme = "README.md"
 license = {file = "LICENSE"}
 authors = [
-    {name = "Your Name", email = "your.email@example.com"},
-]
-maintainers = [
-    {name = "Your Name", email = "your.email@example.com"},
+    {name = "Sanjay C Nagi", email = "sanjay.c.nagi@gmail.com"},
 ]
 keywords = ["phylogenetics", "visualization", "bokeh", "interactive", "trees"]
 classifiers = [
@@ -52,10 +49,8 @@ docs = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/baltic-bokeh"
-Documentation = "https://baltic-bokeh.readthedocs.io"
-Repository = "https://github.com/yourusername/baltic-bokeh.git"
-Issues = "https://github.com/yourusername/baltic-bokeh/issues"
+Homepage = "https://github.com/sanjaynagi/baltic-bokeh"
+Issues = "https://github.com/sanjaynagi/baltic-bokeh/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["baltic_bokeh"]

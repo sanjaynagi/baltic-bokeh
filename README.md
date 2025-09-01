@@ -1,7 +1,7 @@
 # Baltic-Bokeh
 
-[![Tests](https://github.com/yourusername/baltic-bokeh/workflows/Tests/badge.svg)](https://github.com/yourusername/baltic-bokeh/actions)
-[![CI](https://github.com/yourusername/baltic-bokeh/workflows/CI/badge.svg)](https://github.com/yourusername/baltic-bokeh/actions)
+[![Tests](https://github.com/sanjaynagi/baltic-bokeh/workflows/Tests/badge.svg)](https://github.com/sanjaynagi/baltic-bokeh/actions)
+[![CI](https://github.com/sanjaynagi/baltic-bokeh/workflows/CI/badge.svg)](https://github.com/sanjaynagi/baltic-bokeh/actions)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 
 Interactive phylogenetic tree visualization using Bokeh and Baltic.
@@ -62,7 +62,7 @@ show(p)
 ### Installation for Development
 
 ```bash
-git clone https://github.com/yourusername/baltic-bokeh.git
+git clone https://github.com/sanjaynagi/baltic-bokeh.git
 cd baltic-bokeh
 pip install -e .
 ```
