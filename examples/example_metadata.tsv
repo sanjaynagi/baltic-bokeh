@@ -1,0 +1,11 @@
+sample	species	location	country	collection_date
+sample_001	gambiae	Accra	Ghana	2023-01-15
+sample_002	gambiae	Kumasi	Ghana	2023-02-20
+sample_003	coluzzii	Ouagadougou	Burkina Faso	2023-01-10
+sample_004	arabiensis	Nairobi	Kenya	2023-03-05
+sample_005	arabiensis	Mombasa	Kenya	2023-02-28
+sample_006	merus	Durban	South Africa	2023-01-25
+sample_007	merus	Cape Town	South Africa	2023-03-15
+sample_008	melas	Libreville	Gabon	2023-02-10
+sample_009	coluzzii	Bamako	Mali	2023-01-30
+sample_010	gambiae	Lagos	Nigeria	2023-03-20
