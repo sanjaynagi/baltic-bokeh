@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.15.0"
+__generated_with = "0.15.2"
 app = marimo.App(width="full")
 
 
@@ -8,13 +8,14 @@ app = marimo.App(width="full")
 def _():
     import marimo as mo
     import baltic as bt
-    from baltic import bokeh as bt_bokeh
+    import baltic_bokeh as bt_bokeh
     import pandas as pd
 
-    tree = bt.loadNewick('./vgsc_focal.fasta.treefile')
-    metadata = pd.read_csv('./vgsc-metadata.tsv', sep="\t")
+    tree = bt.loadNewick("./examples/example.newick")
+    metadata = pd.read_csv("./examples/example_metadata.tsv", sep="\t")
 
     import plotly.express as px
+
     TAXON_PALETTE = px.colors.qualitative.Vivid
     TAXON_COLORS = {
         "gambiae": TAXON_PALETTE[1],
@@ -28,25 +29,26 @@ def _():
         "gcx2": TAXON_PALETTE[8],
         "gcx3": TAXON_PALETTE[9],
         "gcx4": TAXON_PALETTE[10],
-        "unassigned": "black"
+        "unassigned": "black",
     }
 
     # Interactive plot with metadata coloring
-    p = bt_bokeh.plotCircularTree(tree,
-                        metadata_df=None,
-                        color_column=None,
-                        plot_width=1000, plot_height=1000
+    p = bt_bokeh.plotTree(
+        tree, metadata_df=None, color_column=None, plot_width=600, plot_height=600
     )
 
-    p = bt_bokeh.plotCircularPoints(tree, p=p,
-                          metadata_df=metadata,
-                          color_column='taxon',
-                          color_discrete_map=TAXON_COLORS,
-                          plot_width=1000, plot_height=1000,
-                          hover_data=metadata.columns.to_list()
+    p = bt_bokeh.plotPoints(
+        tree,
+        p=p,
+        metadata_df=metadata,
+        color_column="location",
+        # color_discrete_map=TAXON_COLORS,
+        size=15,
+        plot_width=600,
+        plot_height=600,
+        hover_data=["species", "country"],
     )
-
-    return (p,)
+    return metadata, p
 
 
 @app.cell
@@ -56,7 +58,8 @@ def _(p):
 
 
 @app.cell
-def _():
+def _(metadata):
+    metadata
     return
 
 

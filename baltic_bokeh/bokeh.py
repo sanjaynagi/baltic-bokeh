@@ -232,6 +232,7 @@ def plotPoints(
     metadata_df=None,
     color_column=None,
     color_discrete_map=None,
+    alpha=1,
     plot_width=800,
     plot_height=600,
     hover_data=None,
@@ -333,7 +334,7 @@ def plotPoints(
 
         # Plot points
         point_size = size if callable(size) else size
-        p.scatter("x", "y", size=point_size, color="colors", source=source, alpha=0.8)
+        p.scatter("x", "y", size=point_size, color="colors", source=source, alpha=alpha)
 
     return p
 
@@ -493,6 +494,7 @@ def plotCircularPoints(
     metadata_df=None,
     color_column=None,
     color_discrete_map=None,
+    alpha=1,
     plot_width=800,
     plot_height=800,
     hover_data=None,
@@ -593,7 +595,7 @@ def plotCircularPoints(
 
         # Plot points
         point_size = size if callable(size) else size
-        p.scatter("x", "y", size=point_size, color="colors", source=source, alpha=0.8)
+        p.scatter("x", "y", size=point_size, color="colors", source=source, alpha=alpha)
 
     return p
 
