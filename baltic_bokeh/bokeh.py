@@ -12,6 +12,7 @@ from bokeh.plotting import figure
 from bokeh.models import HoverTool, ColumnDataSource
 from bokeh.palettes import Category10, Set3
 import numpy as np
+from numba import njit
 
 def plotRectangular(
     tree,
@@ -22,7 +23,8 @@ def plotRectangular(
     connection_type='baltic',
     hover_data=None,
     plot_width=600,
-    plot_height=600
+    plot_height=600,
+    output_backend='webgl'
 ):
     """
     Plot a rectangular phylogenetic tree with optional metadata-based coloring 
@@ -55,6 +57,8 @@ def plotRectangular(
         Width of the Bokeh plot in pixels.
     plot_height : int, default=600
         Height of the Bokeh plot in pixels.
+    output_backend : str, default='webgl'
+        Bokeh output backend. 'webgl' is recommended for better performance with many points.
 
     Returns
     -------
@@ -73,7 +77,7 @@ def plotRectangular(
     >>> show(p)
     """
     p = plotRectangularTree(
-        tree, connection_type=connection_type, plot_width=plot_width, plot_height=plot_height
+        tree, connection_type=connection_type, plot_width=plot_width, plot_height=plot_height, output_backend=output_backend
     )
 
     p = plotRectangularPoints(
@@ -85,7 +89,8 @@ def plotRectangular(
         size=size,
         hover_data=hover_data,
         plot_width=plot_width,
-        plot_height=plot_height
+        plot_height=plot_height,
+        output_backend=output_backend
     )
 
     return p
@@ -99,7 +104,8 @@ def plotCircular(
     size=15,
     hover_data=None,
     plot_width=600,
-    plot_height=600
+    plot_height=600,
+    output_backend='webgl'
 ):
     """
     Plot a circular (radial) phylogenetic tree with optional metadata-based 
@@ -128,6 +134,8 @@ def plotCircular(
         Width of the Bokeh plot in pixels.
     plot_height : int, default=600
         Height of the Bokeh plot in pixels.
+    output_backend : str, default='webgl'
+        Bokeh output backend. 'webgl' is recommended for better performance with many points.
 
     Returns
     -------
@@ -147,7 +155,7 @@ def plotCircular(
     """
     
     p = plotCircularTree(
-        tree, plot_width=plot_width, plot_height=plot_height
+        tree, plot_width=plot_width, plot_height=plot_height, output_backend=output_backend
     )
 
     p = plotCircularPoints(
@@ -159,7 +167,8 @@ def plotCircular(
         size=size,
         hover_data=hover_data,
         plot_width=plot_width,
-        plot_height=plot_height
+        plot_height=plot_height,
+        output_backend=output_backend
     )
 
     return p
@@ -173,7 +182,8 @@ def plotRectangularTree(
     y_attr=lambda k: k.y,
     width=2,
     plot_width=800,
-    plot_height=600
+    plot_height=600,
+    output_backend='webgl'
 ):
     """
     Plot the tree using Bokeh with black lines.
@@ -187,6 +197,7 @@ def plotRectangularTree(
     width (int): Line width. Default 2.
     plot_width (int): Width of the plot if creating new figure
     plot_height (int): Height of the plot if creating new figure
+    output_backend (str): Bokeh output backend. Default 'webgl' for better performance with many lines.
 
     Returns:
     bokeh.plotting.figure: The bokeh figure with tree plot
@@ -197,6 +208,7 @@ def plotRectangularTree(
             height=plot_height,
             title="Phylogenetic Tree",
             tools="pan,wheel_zoom,box_zoom,reset,save",
+            output_backend=output_backend
         )
 
     assert connection_type in [
@@ -261,7 +273,8 @@ def plotRectangularPoints(
     alpha=1,
     plot_width=800,
     plot_height=600,
-    hover_data=None
+    hover_data=None,
+    output_backend='webgl'
 ):
     """
     Plot points on the tree with interactive features and metadata support.
@@ -288,6 +301,7 @@ def plotRectangularPoints(
             height=plot_height,
             title="Phylogenetic Tree Points",
             tools="pan,wheel_zoom,box_zoom,reset,save",
+            output_backend=output_backend
         )
 
     if x_attr is None:
@@ -316,7 +330,8 @@ def plotCircularTree(
     normaliseHeight=None,
     precision=15,
     plot_width=800,
-    plot_height=800
+    plot_height=800,
+    output_backend='webgl'
 ):
     """
     Plot the tree in a circular layout using Bokeh with black lines.
@@ -344,6 +359,7 @@ def plotCircularTree(
             height=plot_height,
             title="Circular Phylogenetic Tree",
             tools="pan,wheel_zoom,box_zoom,reset,save",
+            output_backend=output_backend
         )
         p.axis.visible = False
         p.xgrid.visible = False
@@ -423,7 +439,8 @@ def plotCircularPoints(
     alpha=1,
     plot_width=800,
     plot_height=800,
-    hover_data=None
+    hover_data=None,
+    output_backend='webgl'
 ):
     """
     Plot points on a circular tree with interactive features and metadata support.
@@ -434,6 +451,7 @@ def plotCircularPoints(
             height=plot_height,
             title="Circular Tree Points",
             tools="pan,wheel_zoom,box_zoom,reset,save",
+            output_backend=output_backend
         )
         p.axis.visible = False
         p.xgrid.visible = False
@@ -446,28 +464,131 @@ def plotCircularPoints(
 
     data, hover_data = prepare_bokeh_data(tree_obj, hover_data, df_metadata, color_column, color_discrete_map)
 
-    # add coordinates
-    if inwardSpace < 0:
-        inwardSpace -= tree_obj.treeHeight
+    xs, ys, is_leaf = extract_tree_arrays_points(tree_obj, x_attr, y_attr)
 
-    circ_s = circStart * math.pi * 2
-    circ = circFrac * math.pi * 2
+    X, Y = compute_circular_coords(
+        xs, ys, is_leaf,
+        tree_height=tree_obj.treeHeight,
+        y_span=tree_obj.ySpan,
+        inwardSpace=inwardSpace,
+        circStart=circStart,
+        circFrac=circFrac
+    )
 
-    allXs = list(map(x_attr, tree_obj.Objects))
-    if normaliseHeight is None:
-        normaliseHeight = lambda value: (value - min(allXs)) / (max(allXs) - min(allXs))
-
-    for k in tree_obj.Objects:
-        if k.is_leaf():
-            x = normaliseHeight(x_attr(k) + inwardSpace)
-            y = circ_s + circ * y_attr(k) / tree_obj.ySpan
-            X = math.sin(y) * x
-            Y = math.cos(y) * x
-        
-            data["x"].append(X)
-            data["y"].append(Y)
+    data["x"].extend(X.tolist())
+    data["y"].extend(Y.tolist())
 
     return plot_bokeh_scatter(p, data, hover_data, size, alpha)
+
+
+def extract_tree_arrays_points(tree_obj, x_attr, y_attr):
+    xs, ys, is_leaf = [], [], []
+    for k in tree_obj.Objects:
+        xs.append(x_attr(k))
+        ys.append(y_attr(k))
+        is_leaf.append(k.is_leaf())
+    return np.array(xs, dtype=np.float64), np.array(ys, dtype=np.float64), np.array(is_leaf, dtype=np.bool_)
+
+import numpy as np
+
+def extract_tree_arrays_trees(tree_obj, x_attr, y_attr):
+    n = len(tree_obj.Objects)
+    xs = np.empty(n, dtype=np.float64)
+    ys = np.empty(n, dtype=np.float64)
+    parent = np.full(n, -1, dtype=np.int32)
+    is_node = np.zeros(n, dtype=np.bool_)
+    left_child = np.full(n, -1, dtype=np.int32)
+    right_child = np.full(n, -1, dtype=np.int32)
+
+    index_map = {k: i for i, k in enumerate(tree_obj.Objects)}
+
+    for i, k in enumerate(tree_obj.Objects):
+        xs[i] = x_attr(k)
+        ys[i] = y_attr(k)
+        if k.parent:
+            parent[i] = index_map[k.parent]
+        if k.is_node():
+            is_node[i] = True
+            left_child[i] = index_map[k.children[0]]
+            right_child[i] = index_map[k.children[-1]]
+
+    return xs, ys, parent, is_node, left_child, right_child
+
+from numba import njit
+import math
+
+@njit
+def compute_circular_segments(xs, ys, parent, is_node, left_child, right_child,
+                              tree_height, y_span, inwardSpace,
+                              circStart, circFrac, precision):
+    n = len(xs)
+    max_segments = n * (precision + 2)  # rough upper bound
+    seg_xs = []
+    seg_ys = []
+
+    if inwardSpace < 0:
+        inwardSpace -= tree_height
+
+    circ_s = circStart * math.pi * 2.0
+    circ = circFrac * math.pi * 2.0
+
+    min_x = xs.min()
+    max_x = xs.max()
+    denom = max_x - min_x
+
+    for i in range(n):
+        x = (xs[i] + inwardSpace - min_x) / denom
+        xp = x
+        if parent[i] != -1 and parent[parent[i]] != -1:
+            xp = (xs[parent[i]] + inwardSpace - min_x) / denom
+
+        y = circ_s + circ * ys[i] / y_span
+        X = math.sin(y)
+        Y = math.cos(y)
+
+        # Radial branch
+        seg_xs.append([X * xp, X * x])
+        seg_ys.append([Y * xp, Y * x])
+
+        # Curved connector
+        if is_node[i]:
+            yl = circ_s + circ * ys[left_child[i]] / y_span
+            yr = circ_s + circ * ys[right_child[i]] / y_span
+
+            for j in range(precision - 1):
+                t1 = yl + (yr - yl) * j / (precision - 1)
+                t2 = yl + (yr - yl) * (j + 1) / (precision - 1)
+                seg_xs.append([math.sin(t1) * x, math.sin(t2) * x])
+                seg_ys.append([math.cos(t1) * x, math.cos(t2) * x])
+
+    return seg_xs, seg_ys
+
+@njit
+def compute_circular_coords(xs, ys, is_leaf, tree_height, y_span, inwardSpace, circStart, circFrac):
+    n = len(xs)
+    Xs = []
+    Ys = []
+
+    # Adjust inward space
+    if inwardSpace < 0:
+        inwardSpace -= tree_height
+
+    circ_s = circStart * math.pi * 2.0
+    circ = circFrac * math.pi * 2.0
+
+    # Normalization
+    min_x = xs.min()
+    max_x = xs.max()
+    denom = max_x - min_x
+
+    for i in range(n):
+        if is_leaf[i]:
+            x = (xs[i] + inwardSpace - min_x) / denom
+            y = circ_s + circ * ys[i] / y_span
+            Xs.append(math.sin(y) * x)
+            Ys.append(math.cos(y) * x)
+
+    return np.array(Xs), np.array(Ys)
 
 def plot_bokeh_scatter(p, data, hover_data=None, size=8, alpha=0.8):
     """
