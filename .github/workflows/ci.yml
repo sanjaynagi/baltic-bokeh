@@ -35,28 +35,3 @@ jobs:
     
     - name: Run tests
       run: pytest tests/ -v
-
-  minimal-test:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Set up Python 3.11
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.11"
-    
-    - name: Install minimal dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install baltic bokeh pandas numpy pytest
-    
-    - name: Test package imports
-      run: |
-        python -c "import baltic_bokeh; print('Import successful!')"
-        python -c "from baltic_bokeh import plotRectangularTree, plotRectangularPoints, plotCircularTree, plotCircularPoints, addText"
-    
-    - name: Run import tests only
-      run: pytest tests/test_imports.py -v
