@@ -13,109 +13,180 @@ from bokeh.models import HoverTool, ColumnDataSource
 from bokeh.palettes import Category10, Set3
 import numpy as np
 
-
-def _prepare_metadata_colors(
-    tree_obj, metadata_df, color_column, color_discrete_map=None, target=None
-):
-    """
-    Helper function to prepare colors based on metadata DataFrame.
-
-    Parameters:
-    tree_obj: The tree object
-    metadata_df (pd.DataFrame): DataFrame with metadata, indexed by sample names
-    color_column (str): Column name to use for coloring
-    color_discrete_map (dict or None): Custom color mapping {value: color}
-    target (function or None): Function to filter which objects to color
-
-    Returns:
-    dict: Mapping from tree objects to colors
-    """
-    if target is None:
-        target = lambda k: k.is_leaf()
-
-    color_map = {}
-
-    # Get unique values in the color column
-    if metadata_df is not None and color_column in metadata_df.columns:
-        unique_values = metadata_df[color_column].dropna().unique()
-
-        # Use provided color map or create default one
-        if color_discrete_map:
-            value_to_color = color_discrete_map
-        else:
-            # Use bokeh palettes for default colors
-            if len(unique_values) <= 3:
-                palette = [
-                    "#1f77b4",
-                    "#ff7f0e",
-                    "#2ca02c",
-                ]  # Basic colors for small sets
-            elif len(unique_values) <= 10:
-                palette = Category10[max(3, len(unique_values))]
-            else:
-                palette = Set3[12]
-            value_to_color = {
-                val: palette[i % len(palette)] for i, val in enumerate(unique_values)
-            }
-
-        # Map tree objects to colors based on metadata
-        for k in filter(target, tree_obj.Objects):
-            if not hasattr(k, "name") or k.name is None:
-                color_map[k] = (
-                    "gray"  # Default for objects without names (internal nodes)
-                )
-                continue
-            sample_name = k.name
-            if sample_name in metadata_df.index:
-                value = metadata_df.loc[sample_name, color_column]
-                if pd.notna(value) and value in value_to_color:
-                    color_map[k] = value_to_color[value]
-                else:
-                    color_map[k] = "gray"  # Default for missing values
-            else:
-                color_map[k] = "gray"  # Default for samples not in metadata
-    else:
-        # No metadata or column provided, use default color
-        for k in filter(target, tree_obj.Objects):
-            color_map[k] = "black"
-
-    return color_map
-
-
-def plotTree(
-    tree_obj,
-    p=None,
-    connection_type=None,
-    target=None,
-    x_attr=None,
-    y_attr=None,
-    width=None,
-    colour=None,
-    metadata_df=None,
+def plotRectangular(
+    tree,
+    df_metadata=None,
     color_column=None,
     color_discrete_map=None,
-    plot_width=800,
-    plot_height=600,
-    **kwargs,
+    size=15,
+    connection_type='baltic',
+    hover_data=None,
+    plot_width=600,
+    plot_height=600
 ):
     """
-    Plot the tree using Bokeh with interactive features and metadata support.
+    Plot a rectangular phylogenetic tree with optional metadata-based coloring 
+    and interactive hover tooltips using Bokeh.
+
+    This function combines the base tree structure (via `plotRectangularTree`) 
+    with scatter points for leaves or nodes (via `plotRectangularPoints`), 
+    allowing integration of metadata for coloring and interactivity.
+
+    Parameters
+    ----------
+    tree : object
+        A phylogenetic tree object with `.Objects` containing nodes/branches.
+    df_metadata : pandas.DataFrame, optional
+        Metadata dataframe indexed by sample names. Used for coloring and hover info.
+    color_column : str, optional
+        Column in `df_metadata` to use for coloring points.
+    color_discrete_map : dict, optional
+        Custom mapping of metadata values to colors, e.g. {"A": "red", "B": "blue"}.
+        If not provided, a default Bokeh palette is used.
+    size : int, default=15
+        Size of scatter points representing tree tips/nodes.
+    connection_type : {"baltic", "direct"}, default="baltic"
+        Type of branch connection:
+        - "baltic": horizontal-vertical style (classic phylogenetic tree)
+        - "direct": straight-line connections between parent and child
+    hover_data : list of str, optional
+        List of additional metadata columns to display in hover tooltips.
+    plot_width : int, default=600
+        Width of the Bokeh plot in pixels.
+    plot_height : int, default=600
+        Height of the Bokeh plot in pixels.
+
+    Returns
+    -------
+    bokeh.plotting.figure
+        A Bokeh figure object containing the interactive rectangular tree plot.
+
+    Examples
+    --------
+    >>> p = plotRectangular(
+    ...     tree,
+    ...     df_metadata=metadata,
+    ...     color_column="host",
+    ...     hover_data=["location", "date"]
+    ... )
+    >>> from bokeh.io import show
+    >>> show(p)
+    """
+    p = plotRectangularTree(
+        tree, connection_type=connection_type, plot_width=plot_width, plot_height=plot_height
+    )
+
+    p = plotRectangularPoints(
+        tree,
+        p=p,
+        df_metadata=df_metadata,
+        color_column=color_column,
+        color_discrete_map=color_discrete_map,
+        size=size,
+        hover_data=hover_data,
+        plot_width=plot_width,
+        plot_height=plot_height
+    )
+
+    return p
+
+
+def plotCircular(
+    tree,
+    df_metadata=None,
+    color_column=None,
+    color_discrete_map=None,
+    size=15,
+    hover_data=None,
+    plot_width=600,
+    plot_height=600
+):
+    """
+    Plot a circular (radial) phylogenetic tree with optional metadata-based 
+    coloring and interactive hover tooltips using Bokeh.
+
+    This function combines the circular tree layout (via `plotCircularTree`) 
+    with scatter points for leaves (via `plotCircularPoints`), allowing 
+    integration of metadata for coloring and interactivity.
+
+    Parameters
+    ----------
+    tree : object
+        A phylogenetic tree object with `.Objects` containing nodes/branches.
+    df_metadata : pandas.DataFrame, optional
+        Metadata dataframe indexed by sample names. Used for coloring and hover info.
+    color_column : str, optional
+        Column in `df_metadata` to use for coloring points.
+    color_discrete_map : dict, optional
+        Custom mapping of metadata values to colors, e.g. {"A": "red", "B": "blue"}.
+        If not provided, a default Bokeh palette is used.
+    size : int, default=15
+        Size of scatter points representing tree tips.
+    hover_data : list of str, optional
+        List of additional metadata columns to display in hover tooltips.
+    plot_width : int, default=600
+        Width of the Bokeh plot in pixels.
+    plot_height : int, default=600
+        Height of the Bokeh plot in pixels.
+
+    Returns
+    -------
+    bokeh.plotting.figure
+        A Bokeh figure object containing the interactive circular tree plot.
+
+    Examples
+    --------
+    >>> p = plotCircular(
+    ...     tree,
+    ...     df_metadata=metadata,
+    ...     color_column="host",
+    ...     hover_data=["location", "date"]
+    ... )
+    >>> from bokeh.io import show
+    >>> show(p)
+    """
+    
+    p = plotCircularTree(
+        tree, plot_width=plot_width, plot_height=plot_height
+    )
+
+    p = plotCircularPoints(
+        tree,
+        p=p,
+        df_metadata=df_metadata,
+        color_column=color_column,
+        color_discrete_map=color_discrete_map,
+        size=size,
+        hover_data=hover_data,
+        plot_width=plot_width,
+        plot_height=plot_height
+    )
+
+    return p
+
+
+def plotRectangularTree(
+    tree_obj,
+    p=None,
+    connection_type='baltic',
+    x_attr=lambda k: k.x,
+    y_attr=lambda k: k.y,
+    width=2,
+    plot_width=800,
+    plot_height=600
+):
+    """
+    Plot the tree using Bokeh with black lines.
 
     Parameters:
     tree_obj: The tree object
     p (bokeh.plotting.figure or None): Bokeh figure to plot on. If None, creates new figure.
-    connection_type (str or None): Connection type ('baltic', 'direct', 'elbow'). Default 'baltic'.
-    target (function or None): Function to select branches to plot. Default plots all.
+    connection_type (str): Connection type ('baltic', 'direct'). Default 'baltic'.
     x_attr (function or None): Function for x-coordinates. Default uses branch.x.
     y_attr (function or None): Function for y-coordinates. Default uses branch.y.
-    width (int or function or None): Line width. Default 2.
-    colour (str or function or None): Line color. Default 'black'.
-    metadata_df (pd.DataFrame or None): DataFrame with metadata for coloring
-    color_column (str or None): Column name in metadata_df for coloring
-    color_discrete_map (dict or None): Custom color mapping {value: color}
+    width (int): Line width. Default 2.
     plot_width (int): Width of the plot if creating new figure
     plot_height (int): Height of the plot if creating new figure
-    **kwargs: Additional arguments
 
     Returns:
     bokeh.plotting.figure: The bokeh figure with tree plot
@@ -128,115 +199,69 @@ def plotTree(
             tools="pan,wheel_zoom,box_zoom,reset,save",
         )
 
-    if target is None:
-        target = lambda k: True
-    if x_attr is None:
-        x_attr = lambda k: k.x
-    if y_attr is None:
-        y_attr = lambda k: k.y
-    if width is None:
-        width = 2
-    if connection_type is None:
-        connection_type = "baltic"
-
     assert connection_type in [
         "baltic",
         "direct",
-        "elbow",
     ], f'Unrecognised drawing type "{connection_type}"'
-
-    # Prepare colors from metadata if provided
-    if metadata_df is not None and color_column is not None:
-        # Use leaf-only target for metadata coloring
-        metadata_target = lambda k: k.is_leaf()
-        color_map = _prepare_metadata_colors(
-            tree_obj, metadata_df, color_column, color_discrete_map, metadata_target
-        )
-        colour = lambda k: color_map.get(k, "black")
-    elif colour is None:
-        colour = "black"
 
     # Collect line segments
     xs = []
     ys = []
-    colors = []
 
-    for k in filter(target, tree_obj.Objects):
+    for k in tree_obj.Objects:
         x = x_attr(k)
         xp = x_attr(k.parent) if k.parent else x
         y = y_attr(k)
-
-        try:
-            color = colour(k) if callable(colour) else colour
-        except (KeyError, AttributeError):
-            color = "gray"
 
         if connection_type == "baltic":
             # Horizontal branch to parent
             xs.extend([xp, x])
             ys.extend([y, y])
-            colors.extend([color, color])
 
             # Vertical connector for internal nodes
             if k.is_node():
                 yl, yr = y_attr(k.children[0]), y_attr(k.children[-1])
                 xs.extend([x, x])
                 ys.extend([yl, yr])
-                colors.extend([color, color])
 
         elif connection_type == "direct":
             yp = y_attr(k.parent) if k.parent else y
             xs.extend([xp, x])
             ys.extend([yp, y])
-            colors.extend([color, color])
-
-        elif connection_type == "elbow":
-            yp = y_attr(k.parent) if k.parent else y
-            # Create elbow connection: parent_x,parent_y -> parent_x,child_y -> child_x,child_y
-            xs.extend([xp, xp, x])
-            ys.extend([yp, y, y])
-            colors.extend([color, color, color])
 
     # Plot line segments
     if xs and ys:
-        # For bokeh, we need to plot line segments differently
-        # Group consecutive points of same color and plot as multi_line
-        line_data = {"xs": [], "ys": [], "colors": []}
+        line_data = {"xs": [], "ys": []}
 
         i = 0
         while i < len(xs) - 1:
-            current_color = colors[i]
             line_xs = [xs[i], xs[i + 1]]
             line_ys = [ys[i], ys[i + 1]]
 
             line_data["xs"].append(line_xs)
             line_data["ys"].append(line_ys)
-            line_data["colors"].append(current_color)
             i += 2
 
         if line_data["xs"]:
             source = ColumnDataSource(line_data)
-            p.multi_line("xs", "ys", color="colors", line_width=width, source=source)
+            p.multi_line("xs", "ys", color="black", line_width=width, source=source)
 
     return p
 
 
-def plotPoints(
+def plotRectangularPoints(
     tree_obj,
     p=None,
     x_attr=None,
     y_attr=None,
-    target=None,
-    size=None,
-    colour=None,
-    metadata_df=None,
+    size=10,
+    df_metadata=None,
     color_column=None,
     color_discrete_map=None,
     alpha=1,
     plot_width=800,
     plot_height=600,
-    hover_data=None,
-    **kwargs,
+    hover_data=None
 ):
     """
     Plot points on the tree with interactive features and metadata support.
@@ -246,16 +271,13 @@ def plotPoints(
     p (bokeh.plotting.figure or None): Bokeh figure to plot on. If None, creates new figure.
     x_attr (function or None): Function for x-coordinates. Default uses branch.x.
     y_attr (function or None): Function for y-coordinates. Default uses branch.y.
-    target (function or None): Function to select branches. Default selects leaves.
     size (int or function or None): Point size. Default 8.
-    colour (str or function or None): Point color. Default 'black'.
-    metadata_df (pd.DataFrame or None): DataFrame with metadata for coloring
-    color_column (str or None): Column name in metadata_df for coloring
+    df_metadata (pd.DataFrame or None): DataFrame with metadata for coloring
+    color_column (str or None): Column name in df_metadata for coloring
     color_discrete_map (dict or None): Custom color mapping {value: color}
     plot_width (int): Width of the plot if creating new figure
     plot_height (int): Height of the plot if creating new figure
     hover_data (list or None): Additional columns from metadata to show on hover
-    **kwargs: Additional arguments
 
     Returns:
     bokeh.plotting.figure: The bokeh figure with points
@@ -268,119 +290,50 @@ def plotPoints(
             tools="pan,wheel_zoom,box_zoom,reset,save",
         )
 
-    if target is None:
-        target = lambda k: k.is_leaf()
     if x_attr is None:
         x_attr = lambda k: k.x
     if y_attr is None:
         y_attr = lambda k: k.y
-    if size is None:
-        size = 8
-
-    # Prepare colors from metadata if provided
-    if metadata_df is not None and color_column is not None:
-        color_map = _prepare_metadata_colors(
-            tree_obj, metadata_df, color_column, color_discrete_map, target
-        )
-        colour = lambda k: color_map.get(k, "gray")
-    elif colour is None:
-        colour = "black"
 
     # Collect point data
-    data = {"x": [], "y": [], "colors": [], "names": []}
+    data, hover_data = prepare_bokeh_data(tree_obj, hover_data, df_metadata, color_column, color_discrete_map)
+    for k in tree_obj.Objects:
+        if k.is_leaf():
+            data["x"].append(x_attr(k))
+            data["y"].append(y_attr(k))
 
-    # Add hover data columns if provided
-    if hover_data and metadata_df is not None:
-        for col in hover_data:
-            if col in metadata_df.columns:
-                data[col] = []
-
-    for k in filter(target, tree_obj.Objects):
-        data["x"].append(x_attr(k))
-        data["y"].append(y_attr(k))
-        data["names"].append(k.name)
-
-        try:
-            color = colour(k) if callable(colour) else colour
-        except (KeyError, AttributeError):
-            color = "gray"
-        data["colors"].append(color)
-
-        # Add hover data
-        if hover_data and metadata_df is not None:
-            for col in hover_data:
-                if col in metadata_df.columns and k.name in metadata_df.index:
-                    value = metadata_df.loc[k.name, col]
-                    data[col].append(str(value) if pd.notna(value) else "N/A")
-                elif col in data:
-                    data[col].append("N/A")
-
-    if data["x"]:
-        source = ColumnDataSource(data)
-
-        # Create hover tool
-        hover_tooltips = [("Name", "@names")]
-        if color_column and metadata_df is not None:
-            hover_tooltips.append(
-                (color_column, f"@{color_column}" if color_column in data else "N/A")
-            )
-        if hover_data:
-            for col in hover_data:
-                if col in data:
-                    hover_tooltips.append((col, f"@{col}"))
-
-        hover = HoverTool(tooltips=hover_tooltips)
-        p.add_tools(hover)
-
-        # Plot points
-        point_size = size if callable(size) else size
-        p.scatter("x", "y", size=point_size, color="colors", source=source, alpha=alpha)
-
-    return p
-
+    return plot_bokeh_scatter(p, data, hover_data, size, alpha)
 
 def plotCircularTree(
     tree_obj,
     p=None,
-    target=None,
-    x_attr=None,
-    y_attr=None,
-    width=None,
-    colour=None,
+    x_attr=lambda k: k.x,
+    y_attr=lambda k: k.y,
+    width=2,
     circStart=0.0,
     circFrac=1.0,
     inwardSpace=0.0,
     normaliseHeight=None,
     precision=15,
-    metadata_df=None,
-    color_column=None,
-    color_discrete_map=None,
     plot_width=800,
-    plot_height=800,
-    **kwargs,
+    plot_height=800
 ):
     """
-    Plot the tree in a circular layout using Bokeh.
+    Plot the tree in a circular layout using Bokeh with black lines.
 
     Parameters:
     tree_obj: The tree object
     p (bokeh.plotting.figure or None): Bokeh figure to plot on. If None, creates new figure.
-    target (function or None): Function to select branches to plot. Default plots all.
     x_attr (function or None): Function for x-coordinates. Default uses branch.x.
     y_attr (function or None): Function for y-coordinates. Default uses branch.y.
-    width (int or function or None): Line width. Default 2.
-    colour (str or function or None): Line color. Default 'black'.
+    width (int): Line width. Default 2.
     circStart (float): Starting angle in fractions of 2*pi. Default 0.0.
     circFrac (float): Fraction of full circle to use. Default 1.0.
     inwardSpace (float): Space to leave in middle. Default 0.0.
     normaliseHeight (function or None): Height normalization function.
     precision (int): Number of points for curved segments. Default 15.
-    metadata_df (pd.DataFrame or None): DataFrame with metadata for coloring
-    color_column (str or None): Column name in metadata_df for coloring
-    color_discrete_map (dict or None): Custom color mapping {value: color}
     plot_width (int): Width of the plot if creating new figure
     plot_height (int): Height of the plot if creating new figure
-    **kwargs: Additional arguments
 
     Returns:
     bokeh.plotting.figure: The bokeh figure with circular tree
@@ -396,26 +349,8 @@ def plotCircularTree(
         p.xgrid.visible = False
         p.ygrid.visible = False
 
-    if target is None:
-        target = lambda k: True
-    if x_attr is None:
-        x_attr = lambda k: k.x
-    if y_attr is None:
-        y_attr = lambda k: k.y
-    if colour is None:
-        colour = "black"
-    if width is None:
-        width = 2
-
     if inwardSpace < 0:
         inwardSpace -= tree_obj.treeHeight
-
-    # Prepare colors from metadata if provided
-    if metadata_df is not None and color_column is not None:
-        color_map = _prepare_metadata_colors(
-            tree_obj, metadata_df, color_column, color_discrete_map, target
-        )
-        colour = lambda k: color_map.get(k, "gray")
 
     circ_s = circStart * math.pi * 2
     circ = circFrac * math.pi * 2
@@ -431,9 +366,9 @@ def plotCircularTree(
     )
 
     # Collect line segments for circular tree
-    line_data = {"xs": [], "ys": [], "colors": []}
+    line_data = {"xs": [], "ys": []}
 
-    for k in filter(target, tree_obj.Objects):
+    for k in tree_obj.Objects:
         x = normaliseHeight(x_attr(k) + inwardSpace)
         xp = (
             normaliseHeight(x_attr(k.parent) + inwardSpace)
@@ -442,11 +377,6 @@ def plotCircularTree(
         )
         y = y_attr(k)
 
-        try:
-            color = colour(k) if callable(colour) else colour
-        except (KeyError, AttributeError):
-            color = "gray"
-
         y = circ_s + circ * y / tree_obj.ySpan
         X = math.sin(y)
         Y = math.cos(y)
@@ -454,7 +384,6 @@ def plotCircularTree(
         # Radial branch
         line_data["xs"].append([X * xp, X * x])
         line_data["ys"].append([Y * xp, Y * x])
-        line_data["colors"].append(color)
 
         # Curved connector for internal nodes
         if k.is_node():
@@ -470,11 +399,10 @@ def plotCircularTree(
             for i in range(len(xs) - 1):
                 line_data["xs"].append([xs[i], xs[i + 1]])
                 line_data["ys"].append([ys[i], ys[i + 1]])
-                line_data["colors"].append(color)
 
     if line_data["xs"]:
         source = ColumnDataSource(line_data)
-        p.multi_line("xs", "ys", color="colors", line_width=width, source=source)
+        p.multi_line("xs", "ys", color="black", line_width=width, source=source)
 
     return p
 
@@ -484,21 +412,18 @@ def plotCircularPoints(
     p=None,
     x_attr=None,
     y_attr=None,
-    target=None,
-    size=None,
-    colour=None,
+    size=15,
     circStart=0.0,
     circFrac=1.0,
     inwardSpace=0.0,
     normaliseHeight=None,
-    metadata_df=None,
+    df_metadata=None,
     color_column=None,
     color_discrete_map=None,
     alpha=1,
     plot_width=800,
     plot_height=800,
-    hover_data=None,
-    **kwargs,
+    hover_data=None
 ):
     """
     Plot points on a circular tree with interactive features and metadata support.
@@ -514,26 +439,16 @@ def plotCircularPoints(
         p.xgrid.visible = False
         p.ygrid.visible = False
 
-    if target is None:
-        target = lambda k: k.is_leaf()
     if x_attr is None:
         x_attr = lambda k: k.x
     if y_attr is None:
         y_attr = lambda k: k.y
-    if size is None:
-        size = 8
 
+    data, hover_data = prepare_bokeh_data(tree_obj, hover_data, df_metadata, color_column, color_discrete_map)
+
+    # add coordinates
     if inwardSpace < 0:
         inwardSpace -= tree_obj.treeHeight
-
-    # Prepare colors from metadata if provided
-    if metadata_df is not None and color_column is not None:
-        color_map = _prepare_metadata_colors(
-            tree_obj, metadata_df, color_column, color_discrete_map, target
-        )
-        colour = lambda k: color_map.get(k, "gray")
-    elif colour is None:
-        colour = "black"
 
     circ_s = circStart * math.pi * 2
     circ = circFrac * math.pi * 2
@@ -542,62 +457,118 @@ def plotCircularPoints(
     if normaliseHeight is None:
         normaliseHeight = lambda value: (value - min(allXs)) / (max(allXs) - min(allXs))
 
-    # Collect point data
-    data = {"x": [], "y": [], "colors": [], "names": []}
+    for k in tree_obj.Objects:
+        if k.is_leaf():
+            x = normaliseHeight(x_attr(k) + inwardSpace)
+            y = circ_s + circ * y_attr(k) / tree_obj.ySpan
+            X = math.sin(y) * x
+            Y = math.cos(y) * x
+        
+            data["x"].append(X)
+            data["y"].append(Y)
 
-    # Add hover data columns if provided
-    if hover_data and metadata_df is not None:
+    return plot_bokeh_scatter(p, data, hover_data, size, alpha)
+
+def plot_bokeh_scatter(p, data, hover_data=None, size=8, alpha=0.8):
+    """
+    Add scatter points with hover tooltips to a Bokeh figure.
+    
+    Parameters:
+    p (bokeh.plotting.figure): Bokeh figure to add scatter to
+    data (dict): Dictionary containing 'x', 'y', 'names', 'colors' and other data
+    color_column (str or None): Column name for color metadata
+    df_metadata (pd.DataFrame or None): Metadata dataframe 
+    hover_data (list or None): List of additional column names for hover tooltips
+    size (int or function): Size of scatter points. Default 8.
+    alpha (float): Alpha transparency of points. Default 0.8.
+    
+    Returns:
+    bokeh.plotting.figure: The figure with scatter points added
+    """
+    source = ColumnDataSource(data)
+
+    # Create hover tool
+    hover_tooltips = []
+    if hover_data:
         for col in hover_data:
-            if col in metadata_df.columns:
-                data[col] = []
+            if col in data:
+                hover_tooltips.append((col, f"@{col}"))
 
-    for k in filter(target, tree_obj.Objects):
-        x = normaliseHeight(x_attr(k) + inwardSpace)
-        y = circ_s + circ * y_attr(k) / tree_obj.ySpan
-        X = math.sin(y) * x
-        Y = math.cos(y) * x
+    # Plot points
+    renderer = p.scatter(
+        "x", "y", size=size, color="colors", source=source, alpha=alpha
+    )
 
-        data["x"].append(X)
-        data["y"].append(Y)
-        data["names"].append(k.name)
-
-        try:
-            color = colour(k) if callable(colour) else colour
-        except (KeyError, AttributeError):
-            color = "gray"
-        data["colors"].append(color)
-
-        # Add hover data
-        if hover_data and metadata_df is not None:
-            for col in hover_data:
-                if col in metadata_df.columns and k.name in metadata_df.index:
-                    value = metadata_df.loc[k.name, col]
-                    data[col].append(str(value) if pd.notna(value) else "N/A")
-                elif col in data:
-                    data[col].append("N/A")
-
-    if data["x"]:
-        source = ColumnDataSource(data)
-
-        # Create hover tool
-        hover_tooltips = [("Name", "@names")]
-        if color_column and metadata_df is not None:
-            hover_tooltips.append(
-                (color_column, f"@{color_column}" if color_column in data else "N/A")
-            )
-        if hover_data:
-            for col in hover_data:
-                if col in data:
-                    hover_tooltips.append((col, f"@{col}"))
-
-        hover = HoverTool(tooltips=hover_tooltips)
-        p.add_tools(hover)
-
-        # Plot points
-        point_size = size if callable(size) else size
-        p.scatter("x", "y", size=point_size, color="colors", source=source, alpha=alpha)
+    hover = HoverTool(tooltips=hover_tooltips, renderers=[renderer])
+    p.add_tools(hover)
 
     return p
+
+from bokeh.palettes import Category10, Set3
+
+def generate_leaf_colours(
+    df_metadata, color_column, color_discrete_map=None, default_color="grey"
+):
+    """
+    Helper function to prepare colors based on metadata DataFrame.
+
+    Parameters:
+    df_metadata (pd.DataFrame): DataFrame with metadata, indexed by sample names
+    color_column (str): Column name to use for coloring
+    color_discrete_map (dict or None): Custom color mapping {value: color}
+    default_color (str): Fallback color for values not in the mapping
+
+    Returns:
+    list: List of colors corresponding to metadata entries
+    """
+
+    unique_values = df_metadata[color_column].dropna().unique()
+
+    # Use provided color map or create default one
+    if color_discrete_map:
+        value_to_color = color_discrete_map.copy()
+    else:
+        # Use bokeh palettes for default colors
+        if len(unique_values) <= 3:
+            palette = ["#1f77b4", "#ff7f0e", "#2ca02c"]
+        elif len(unique_values) <= 10:
+            palette = Category10[max(3, len(unique_values))]
+        else:
+            palette = Set3[12]
+
+        value_to_color = {
+            val: palette[i % len(palette)] for i, val in enumerate(unique_values)
+        }
+
+    # Assign colors, defaulting to grey if not found
+    colours = [
+        value_to_color.get(val, default_color)
+        for val in df_metadata[color_column].values
+    ]
+
+    return colours
+
+def prepare_bokeh_data(tree_obj, hover_data, df_metadata, color_column, color_discrete_map):
+    # Collect point data
+    data = {"x": [], "y": []}
+    if hover_data is None and df_metadata is not None:
+        hover_data = df_metadata.columns.to_list()
+    elif hover_data is None and df_metadata is None:
+        hover_data = []
+
+    for h in hover_data:
+        data[h] = df_metadata[h].values
+
+    if df_metadata is not None and color_column is not None:
+        assert color_column in df_metadata.columns, f"provided {color_column} as color_column not in metadata"
+        data['colors'] = generate_leaf_colours(
+            df_metadata, color_column, color_discrete_map
+        )
+    elif color_column is None or df_metadata is None:
+        data['colors'] = np.repeat("black", np.sum([o.is_leaf() for o in tree_obj.Objects]))
+
+
+    return data, hover_data
 
 
 def addText(tree_obj, p, target=None, x_attr=None, y_attr=None, text=None, **kwargs):

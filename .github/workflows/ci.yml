@@ -56,7 +56,7 @@ jobs:
     - name: Test package imports
       run: |
         python -c "import baltic_bokeh; print('Import successful!')"
-        python -c "from baltic_bokeh import plotTree, plotPoints, plotCircularTree, plotCircularPoints, addText"
+        python -c "from baltic_bokeh import plotRectangularTree, plotRectangularPoints, plotCircularTree, plotCircularPoints, addText"
     
     - name: Run import tests only
       run: pytest tests/test_imports.py -v

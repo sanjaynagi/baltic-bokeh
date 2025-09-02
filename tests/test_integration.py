@@ -35,7 +35,7 @@ class TestIntegration:
         p = baltic_bokeh.plotCircularPoints(
             tree,
             p=p,
-            metadata_df=metadata,
+            df_metadata=metadata,
             color_column="species",
             color_discrete_map=colors,
             hover_data=["location", "country"],
@@ -54,19 +54,17 @@ class TestIntegration:
         metadata = sample_metadata
 
         # Create rectangular tree
-        p = baltic_bokeh.plotTree(
+        p = baltic_bokeh.plotRectangularTree(
             tree,
-            metadata_df=metadata,
-            color_column="species",
             plot_width=800,
             plot_height=400,
         )
 
         # Add points
-        p = baltic_bokeh.plotPoints(
+        p = baltic_bokeh.plotRectangularPoints(
             tree,
             p=p,
-            metadata_df=metadata,
+            df_metadata=metadata,
             color_column="species",
             hover_data=["location", "country"],
         )
@@ -84,8 +82,8 @@ class TestIntegration:
         """Test all connection types work with real tree."""
         tree = sample_tree
 
-        for conn_type in ["baltic", "direct", "elbow"]:
-            p = baltic_bokeh.plotTree(tree, connection_type=conn_type)
+        for conn_type in ["baltic", "direct"]:
+            p = baltic_bokeh.plotRectangularTree(tree, connection_type=conn_type)
             assert p is not None
             assert len(p.renderers) > 0
 
@@ -94,11 +92,11 @@ class TestIntegration:
         tree = sample_tree
 
         # Tree plot
-        p1 = baltic_bokeh.plotTree(tree)
+        p1 = baltic_bokeh.plotRectangularTree(tree)
         assert p1 is not None
 
         # Points plot
-        p2 = baltic_bokeh.plotPoints(tree)
+        p2 = baltic_bokeh.plotRectangularPoints(tree)
         assert p2 is not None
 
         # Circular tree
@@ -119,11 +117,11 @@ class TestIntegration:
         original_renderer_count = len(p.renderers)
 
         # Chain operations
-        p = baltic_bokeh.plotTree(tree, p=p)
+        p = baltic_bokeh.plotRectangularTree(tree, p=p)
         tree_renderer_count = len(p.renderers)
 
-        p = baltic_bokeh.plotPoints(
-            tree, p=p, metadata_df=metadata, color_column="species"
+        p = baltic_bokeh.plotRectangularPoints(
+            tree, p=p, df_metadata=metadata, color_column="species"
         )
         points_renderer_count = len(p.renderers)
 
@@ -161,9 +159,9 @@ class TestIntegration:
         metadata = pd.DataFrame(data, index=sample_names[: len(data["column_0"])])
 
         # Should handle many hover columns
-        p = baltic_bokeh.plotPoints(
+        p = baltic_bokeh.plotRectangularPoints(
             tree,
-            metadata_df=metadata,
+            df_metadata=metadata,
             color_column="column_0",
             hover_data=column_names[:10],  # First 10 columns
         )

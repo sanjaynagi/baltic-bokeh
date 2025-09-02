@@ -9,58 +9,28 @@ from bokeh.models import ColumnDataSource, HoverTool
 from unittest.mock import Mock, patch
 
 import baltic_bokeh
-from baltic_bokeh.bokeh import _prepare_metadata_colors
-
+from baltic_bokeh.bokeh import generate_leaf_colours, prepare_bokeh_data
 
 class TestMetadataColors:
     """Test metadata color preparation."""
 
-    def test_prepare_metadata_colors_with_metadata(
-        self, sample_tree, sample_metadata, color_map
-    ):
-        """Test color preparation with valid metadata."""
-        color_result = _prepare_metadata_colors(
-            sample_tree, sample_metadata, "species", color_map
-        )
-
-        # Check that colors are assigned
-        assert len(color_result) > 0
-
-        # Check that leaf nodes get colors from metadata
-        leaves = [k for k in sample_tree.Objects if k.is_leaf()]
-        for leaf in leaves:
-            if hasattr(leaf, "name") and leaf.name in sample_metadata.index:
-                species = sample_metadata.loc[leaf.name, "species"]
-                expected_color = color_map.get(species, "gray")
-                assert color_result.get(leaf) == expected_color
-
-    def test_prepare_metadata_colors_without_metadata(self, sample_tree):
-        """Test color preparation without metadata."""
-        color_result = _prepare_metadata_colors(sample_tree, None, None, None)
-
-        # Should default to black for all objects
-        leaves = [k for k in sample_tree.Objects if k.is_leaf()]
-        for leaf in leaves:
-            assert color_result.get(leaf) == "black"
-
-    def test_prepare_metadata_colors_missing_column(self, sample_tree, sample_metadata):
+    def test_generate_leaf_colours_missing_column(self, sample_tree, sample_metadata):
         """Test color preparation with missing column."""
-        color_result = _prepare_metadata_colors(
-            sample_tree, sample_metadata, "nonexistent_column", None
-        )
 
-        # Should default to black when column doesn't exist
-        leaves = [k for k in sample_tree.Objects if k.is_leaf()]
-        for leaf in leaves:
-            assert color_result.get(leaf) == "black"
+        ### this should raise assertion error
+        with pytest.raises(AssertionError):
+            data = prepare_bokeh_data(
+                tree_obj=sample_tree, hover_data=None, df_metadata=sample_metadata, color_column="nonexistent_column", color_discrete_map=None
+            )
+        
 
 
-class TestPlotTree:
-    """Test plotTree function."""
+class TestplotRectangularTree:
+    """Test plotRectangularTree function."""
 
     def test_plot_tree_basic(self, sample_tree):
         """Test basic tree plotting."""
-        p = baltic_bokeh.plotTree(sample_tree, plot_width=400, plot_height=400)
+        p = baltic_bokeh.plotRectangularTree(sample_tree, plot_width=400, plot_height=400)
 
         assert p is not None
         assert hasattr(p, "renderers")
@@ -68,25 +38,10 @@ class TestPlotTree:
         assert p.width == 400
         assert p.height == 400
 
-    def test_plot_tree_with_metadata(self, sample_tree, sample_metadata, color_map):
-        """Test tree plotting with metadata coloring."""
-        p = baltic_bokeh.plotTree(
-            sample_tree,
-            metadata_df=sample_metadata,
-            color_column="species",
-            color_discrete_map=color_map,
-            plot_width=500,
-            plot_height=500,
-        )
-
-        assert p is not None
-        assert p.width == 500
-        assert p.height == 500
-
     def test_plot_tree_custom_figure(self, sample_tree):
         """Test plotting on existing figure."""
         existing_fig = figure(width=300, height=300)
-        p = baltic_bokeh.plotTree(sample_tree, p=existing_fig)
+        p = baltic_bokeh.plotRectangularTree(sample_tree, p=existing_fig)
 
         assert p is existing_fig
         assert p.width == 300
@@ -94,22 +49,22 @@ class TestPlotTree:
 
     def test_plot_tree_connection_types(self, sample_tree):
         """Test different connection types."""
-        for conn_type in ["baltic", "direct", "elbow"]:
-            p = baltic_bokeh.plotTree(sample_tree, connection_type=conn_type)
+        for conn_type in ["baltic", "direct"]:
+            p = baltic_bokeh.plotRectangularTree(sample_tree, connection_type=conn_type)
             assert p is not None
 
     def test_plot_tree_invalid_connection_type(self, sample_tree):
         """Test invalid connection type raises error."""
         with pytest.raises(AssertionError):
-            baltic_bokeh.plotTree(sample_tree, connection_type="invalid")
+            baltic_bokeh.plotRectangularTree(sample_tree, connection_type="invalid")
 
 
-class TestPlotPoints:
-    """Test plotPoints function."""
+class TestplotRectangularPoints:
+    """Test plotRectangularPoints function."""
 
     def test_plot_points_basic(self, sample_tree):
         """Test basic point plotting."""
-        p = baltic_bokeh.plotPoints(sample_tree, plot_width=400, plot_height=400)
+        p = baltic_bokeh.plotRectangularPoints(sample_tree, plot_width=400, plot_height=400)
 
         assert p is not None
         assert p.width == 400
@@ -117,12 +72,12 @@ class TestPlotPoints:
 
     def test_plot_points_with_metadata(self, sample_tree, sample_metadata, color_map):
         """Test point plotting with metadata."""
-        p = baltic_bokeh.plotPoints(
+        p = baltic_bokeh.plotRectangularPoints(
             sample_tree,
-            metadata_df=sample_metadata,
+            df_metadata=sample_metadata,
             color_column="species",
             color_discrete_map=color_map,
-            hover_data=["location", "year"],
+            hover_data=["location", "country"],
         )
 
         assert p is not None
@@ -130,17 +85,10 @@ class TestPlotPoints:
         hover_tools = [tool for tool in p.tools if isinstance(tool, HoverTool)]
         assert len(hover_tools) > 0
 
-    def test_plot_points_custom_target(self, sample_tree):
-        """Test point plotting with custom target function."""
-        # Plot only leaves (default behavior) since internal nodes may not have names
-        p = baltic_bokeh.plotPoints(sample_tree, target=lambda k: k.is_leaf())
-        assert p is not None
-
     def test_plot_points_size_and_color(self, sample_tree):
         """Test point plotting with custom size and color."""
-        p = baltic_bokeh.plotPoints(sample_tree, size=12, colour="red")
+        p = baltic_bokeh.plotRectangularPoints(sample_tree, size=12)
         assert p is not None
-
 
 class TestPlotCircularTree:
     """Test plotCircularTree function."""
@@ -161,18 +109,6 @@ class TestPlotCircularTree:
         """Test circular tree with custom parameters."""
         p = baltic_bokeh.plotCircularTree(
             sample_tree, circStart=0.25, circFrac=0.5, inwardSpace=0.1
-        )
-        assert p is not None
-
-    def test_plot_circular_tree_with_metadata(
-        self, sample_tree, sample_metadata, color_map
-    ):
-        """Test circular tree with metadata coloring."""
-        p = baltic_bokeh.plotCircularTree(
-            sample_tree,
-            metadata_df=sample_metadata,
-            color_column="species",
-            color_discrete_map=color_map,
         )
         assert p is not None
 
@@ -197,10 +133,10 @@ class TestPlotCircularPoints:
         """Test circular points with metadata and hover."""
         p = baltic_bokeh.plotCircularPoints(
             sample_tree,
-            metadata_df=sample_metadata,
+            df_metadata=sample_metadata,
             color_column="species",
             color_discrete_map=color_map,
-            hover_data=["location", "year"],
+            hover_data=["location", "country"],
         )
 
         assert p is not None
@@ -241,8 +177,8 @@ class TestPackageImports:
         import baltic_bokeh
 
         expected_functions = [
-            "plotTree",
-            "plotPoints",
+            "plotRectangularTree",
+            "plotRectangularPoints",
             "plotCircularTree",
             "plotCircularPoints",
             "addText",
@@ -262,8 +198,8 @@ class TestPackageImports:
 
         # Check __all__ contains expected functions
         assert set(baltic_bokeh.__all__) == {
-            "plotTree",
-            "plotPoints",
+            "plotRectangularTree",
+            "plotRectangularPoints",
             "plotCircularTree",
             "plotCircularPoints",
             "addText",
@@ -277,10 +213,10 @@ class TestEdgeCases:
         """Test handling of empty metadata."""
         empty_metadata = pd.DataFrame()
 
-        p = baltic_bokeh.plotPoints(
-            sample_tree, metadata_df=empty_metadata, color_column="nonexistent"
-        )
-        assert p is not None
+        with pytest.raises(AssertionError):
+            baltic_bokeh.plotRectangularPoints(
+                sample_tree, df_metadata=empty_metadata, color_column="nonexistent"
+            )
 
     def test_missing_metadata_samples(self, sample_tree):
         """Test handling when tree samples not in metadata."""
@@ -290,18 +226,7 @@ class TestEdgeCases:
             index=["X", "Y"],
         )
 
-        p = baltic_bokeh.plotPoints(
-            sample_tree, metadata_df=metadata, color_column="species"
-        )
-        assert p is not None
-
-    def test_none_values_in_metadata(self, sample_tree, sample_metadata):
-        """Test handling of None/NaN values in metadata."""
-        # Add some NaN values
-        metadata_with_nan = sample_metadata.copy()
-        metadata_with_nan.loc["A", "species"] = None
-
-        p = baltic_bokeh.plotPoints(
-            sample_tree, metadata_df=metadata_with_nan, color_column="species"
+        p = baltic_bokeh.plotRectangularPoints(
+            sample_tree, df_metadata=metadata, color_column="species"
         )
         assert p is not None

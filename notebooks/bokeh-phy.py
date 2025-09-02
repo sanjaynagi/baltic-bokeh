@@ -11,8 +11,8 @@ def _():
     import baltic_bokeh as bt_bokeh
     import pandas as pd
 
-    tree = bt.loadNewick("./examples/example.newick")
-    metadata = pd.read_csv("./examples/example_metadata.tsv", sep="\t")
+    tree = bt.loadNewick("./examples/vgsc_focal.fasta.treefile")
+    metadata = pd.read_csv("./examples/vgsc_focal.metadata.tsv", sep="\t")
 
     import plotly.express as px
 
@@ -29,37 +29,35 @@ def _():
         "gcx2": TAXON_PALETTE[8],
         "gcx3": TAXON_PALETTE[9],
         "gcx4": TAXON_PALETTE[10],
+        "bissau":TAXON_PALETTE[7],
+        "pwani":TAXON_PALETTE[9],
         "unassigned": "black",
     }
 
     # Interactive plot with metadata coloring
-    p = bt_bokeh.plotTree(
-        tree, metadata_df=None, color_column=None, plot_width=600, plot_height=600
-    )
-
-    p = bt_bokeh.plotPoints(
+    p = bt_bokeh.plotCircular(
         tree,
-        p=p,
-        metadata_df=metadata,
-        color_column="location",
-        # color_discrete_map=TAXON_COLORS,
-        size=15,
-        plot_width=600,
-        plot_height=600,
-        hover_data=["species", "country"],
+        df_metadata=metadata,
+        color_column="taxon",
+        color_discrete_map=TAXON_COLORS,
+        size=5,
+        plot_width=1200,
+        plot_height=1200,
+        hover_data=["sample_id", "taxon", "country"],
     )
-    return metadata, p
-
-
-@app.cell
-def _(p):
-    p
     return
 
 
+app._unparsable_cell(
+    r"""
+     p
+    """,
+    name="_"
+)
+
+
 @app.cell
-def _(metadata):
-    metadata
+def _():
     return
 
 

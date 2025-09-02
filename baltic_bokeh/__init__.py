@@ -5,15 +5,15 @@ This package provides interactive Bokeh-based plotting functionality for Baltic 
 offering enhanced interactivity and metadata integration support compared to static matplotlib plots.
 """
 
-from .bokeh import plotTree, plotPoints, plotCircularTree, plotCircularPoints, addText
+from .bokeh import plotCircular, plotRectangular, plotRectangularTree, plotRectangularPoints, plotCircularTree, plotCircularPoints, addText
 
 __version__ = "0.1.0"
-__author__ = "Your Name"
-__email__ = "your.email@example.com"
+__author__ = "Sanjay C Nagi"
+__email__ = "sanjay.c.nagi@gmail.com"
 
 __all__ = [
-    "plotTree",
-    "plotPoints",
+    "plotRectangularTree",
+    "plotRectangularPoints",
     "plotCircularTree",
     "plotCircularPoints",
     "addText",
