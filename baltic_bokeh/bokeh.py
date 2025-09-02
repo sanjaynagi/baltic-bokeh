@@ -365,59 +365,17 @@ def plotCircularTree(
         p.xgrid.visible = False
         p.ygrid.visible = False
 
-    if inwardSpace < 0:
-        inwardSpace -= tree_obj.treeHeight
 
-    circ_s = circStart * math.pi * 2
-    circ = circFrac * math.pi * 2
+    xs, ys, parent, is_node, left_child, right_child = extract_tree_arrays_trees(tree_obj, x_attr, y_attr)
 
-    allXs = list(map(x_attr, tree_obj.Objects))
-    if normaliseHeight is None:
-        normaliseHeight = lambda value: (value - min(allXs)) / (max(allXs) - min(allXs))
-
-    linspace = lambda start, stop, n: (
-        list(start + ((stop - start) / (n - 1)) * i for i in range(n))
-        if n > 1
-        else [stop]
+    seg_xs, seg_ys = compute_circular_segments(
+        xs, ys, parent, is_node, left_child, right_child,
+        tree_obj.treeHeight, tree_obj.ySpan,
+        inwardSpace, circStart, circFrac, precision
     )
 
-    # Collect line segments for circular tree
-    line_data = {"xs": [], "ys": []}
-
-    for k in tree_obj.Objects:
-        x = normaliseHeight(x_attr(k) + inwardSpace)
-        xp = (
-            normaliseHeight(x_attr(k.parent) + inwardSpace)
-            if k.parent and k.parent.parent
-            else x
-        )
-        y = y_attr(k)
-
-        y = circ_s + circ * y / tree_obj.ySpan
-        X = math.sin(y)
-        Y = math.cos(y)
-
-        # Radial branch
-        line_data["xs"].append([X * xp, X * x])
-        line_data["ys"].append([Y * xp, Y * x])
-
-        # Curved connector for internal nodes
-        if k.is_node():
-            yl, yr = y_attr(k.children[0]), y_attr(k.children[-1])
-            yl = circ_s + circ * yl / tree_obj.ySpan
-            yr = circ_s + circ * yr / tree_obj.ySpan
-            ybar = linspace(yl, yr, precision)
-
-            xs = [math.sin(yb) * x for yb in ybar]
-            ys = [math.cos(yb) * x for yb in ybar]
-
-            # Add curved segments
-            for i in range(len(xs) - 1):
-                line_data["xs"].append([xs[i], xs[i + 1]])
-                line_data["ys"].append([ys[i], ys[i + 1]])
-
-    if line_data["xs"]:
-        source = ColumnDataSource(line_data)
+    if seg_xs:
+        source = ColumnDataSource({"xs": seg_xs, "ys": seg_ys})
         p.multi_line("xs", "ys", color="black", line_width=width, source=source)
 
     return p
@@ -495,27 +453,30 @@ def extract_tree_arrays_trees(tree_obj, x_attr, y_attr):
     n = len(tree_obj.Objects)
     xs = np.empty(n, dtype=np.float64)
     ys = np.empty(n, dtype=np.float64)
-    parent = np.full(n, -1, dtype=np.int32)
+    parent = np.full(n, -1, dtype=np.int32)       # -1 means no parent
     is_node = np.zeros(n, dtype=np.bool_)
-    left_child = np.full(n, -1, dtype=np.int32)
+    left_child = np.full(n, -1, dtype=np.int32)   # -1 means no child
     right_child = np.full(n, -1, dtype=np.int32)
 
+    # Map each node object to its index
     index_map = {k: i for i, k in enumerate(tree_obj.Objects)}
 
     for i, k in enumerate(tree_obj.Objects):
         xs[i] = x_attr(k)
         ys[i] = y_attr(k)
-        if k.parent:
+
+        # Assign parent index if it exists in the map
+        if k.parent is not None and k.parent in index_map:
             parent[i] = index_map[k.parent]
+
+        # Assign children if it's an internal node
         if k.is_node():
             is_node[i] = True
-            left_child[i] = index_map[k.children[0]]
-            right_child[i] = index_map[k.children[-1]]
+            if k.children:
+                left_child[i] = index_map.get(k.children[0], -1)
+                right_child[i] = index_map.get(k.children[-1], -1)
 
     return xs, ys, parent, is_node, left_child, right_child
-
-from numba import njit
-import math
 
 @njit
 def compute_circular_segments(xs, ys, parent, is_node, left_child, right_child,
