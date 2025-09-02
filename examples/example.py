@@ -28,14 +28,14 @@ def main():
 
     # Create interactive circular tree plot
     p = baltic_bokeh.plotCircularTree(
-        tree, metadata_df=None, color_column=None, plot_width=800, plot_height=800
+        tree, df_metadata=None, color_column=None, plot_width=800, plot_height=800
     )
 
     # Add interactive points with metadata coloring
     p = baltic_bokeh.plotCircularPoints(
         tree,
         p=p,
-        metadata_df=metadata,
+        df_metadata=metadata,
         color_column="species",
         color_discrete_map=TAXON_COLORS,
         plot_width=800,

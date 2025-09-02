@@ -19,8 +19,8 @@ def test_package_structure():
 
     # Test that expected functions are in __all__
     expected_functions = [
-        "plotTree",
-        "plotPoints",
+        "plotRectangularTree",
+        "plotRectangularPoints",
         "plotCircularTree",
         "plotCircularPoints",
         "addText",
@@ -35,15 +35,15 @@ def test_function_imports():
         import baltic_bokeh
 
         # Test individual function imports
-        from baltic_bokeh import plotTree
-        from baltic_bokeh import plotPoints
+        from baltic_bokeh import plotRectangularTree
+        from baltic_bokeh import plotRectangularPoints
         from baltic_bokeh import plotCircularTree
         from baltic_bokeh import plotCircularPoints
         from baltic_bokeh import addText
 
         # Verify they are callable
-        assert callable(plotTree)
-        assert callable(plotPoints)
+        assert callable(plotRectangularTree)
+        assert callable(plotRectangularPoints)
         assert callable(plotCircularTree)
         assert callable(plotCircularPoints)
         assert callable(addText)

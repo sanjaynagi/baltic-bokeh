@@ -32,7 +32,7 @@ p = baltic_bokeh.plotCircularTree(tree, plot_width=800, plot_height=800)
 p = baltic_bokeh.plotCircularPoints(
     tree, 
     p=p,
-    metadata_df=metadata,
+    df_metadata=metadata,
     color_column='species',
     hover_data=['location', 'date']
 )
