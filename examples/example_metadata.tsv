@@ -1,4 +1,4 @@
-sample	species	location	country	collection_date
+sample	taxon	location	country	collection_date
 sample_001	gambiae	Accra	Ghana	2023-01-15
 sample_002	gambiae	Kumasi	Ghana	2023-02-20
 sample_003	coluzzii	Ouagadougou	Burkina Faso	2023-01-10

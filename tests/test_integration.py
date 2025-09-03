@@ -36,7 +36,7 @@ class TestIntegration:
             tree,
             p=p,
             df_metadata=metadata,
-            color_column="species",
+            color_column="taxon",
             color_discrete_map=colors,
             hover_data=["location", "country"],
         )
@@ -65,7 +65,7 @@ class TestIntegration:
             tree,
             p=p,
             df_metadata=metadata,
-            color_column="species",
+            color_column="taxon",
             hover_data=["location", "country"],
         )
 
@@ -121,7 +121,7 @@ class TestIntegration:
         tree_renderer_count = len(p.renderers)
 
         p = baltic_bokeh.plotRectangularPoints(
-            tree, p=p, df_metadata=metadata, color_column="species"
+            tree, p=p, df_metadata=metadata, color_column="taxon"
         )
         points_renderer_count = len(p.renderers)
 

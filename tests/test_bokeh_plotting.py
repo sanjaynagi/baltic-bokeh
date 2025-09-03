@@ -75,7 +75,7 @@ class TestplotRectangularPoints:
         p = baltic_bokeh.plotRectangularPoints(
             sample_tree,
             df_metadata=sample_metadata,
-            color_column="species",
+            color_column="taxon",
             color_discrete_map=color_map,
             hover_data=["location", "country"],
         )
@@ -134,7 +134,7 @@ class TestPlotCircularPoints:
         p = baltic_bokeh.plotCircularPoints(
             sample_tree,
             df_metadata=sample_metadata,
-            color_column="species",
+            color_column="taxon",
             color_discrete_map=color_map,
             hover_data=["location", "country"],
         )
@@ -222,11 +222,11 @@ class TestEdgeCases:
         """Test handling when tree samples not in metadata."""
         # Create metadata with different sample names
         metadata = pd.DataFrame(
-            {"species": ["other1", "other2"], "location": ["place1", "place2"]},
+            {"taxon": ["other1", "other2"], "location": ["place1", "place2"]},
             index=["X", "Y"],
         )
 
         p = baltic_bokeh.plotRectangularPoints(
-            sample_tree, df_metadata=metadata, color_column="species"
+            sample_tree, df_metadata=metadata, color_column="taxon"
         )
         assert p is not None

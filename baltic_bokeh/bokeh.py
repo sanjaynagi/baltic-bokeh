@@ -22,9 +22,12 @@ def plotRectangular(
     size=15,
     connection_type='baltic',
     hover_data=None,
+    marker="circle",
+    marker_line_color="black",
+    marker_line_width=1,
+    output_backend='webgl',
     plot_width=600,
     plot_height=600,
-    output_backend='webgl'
 ):
     """
     Plot a rectangular phylogenetic tree with optional metadata-based coloring 
@@ -53,6 +56,13 @@ def plotRectangular(
         - "direct": straight-line connections between parent and child
     hover_data : list of str, optional
         List of additional metadata columns to display in hover tooltips.
+    marker : str, default="circle"
+        Type of glyph marker for points. Options include:
+        'circle', 'square', 'hex', 'dot',
+    marker_line_color : str, default="black"
+        Outline color of glyph markers.
+    marker_line_width : int, default=1
+        Outline thickness of glyph markers.
     plot_width : int, default=600
         Width of the Bokeh plot in pixels.
     plot_height : int, default=600
@@ -88,9 +98,12 @@ def plotRectangular(
         color_discrete_map=color_discrete_map,
         size=size,
         hover_data=hover_data,
+        output_backend=output_backend,
+        marker=marker,
+        marker_line_color=marker_line_color,
+        marker_line_width=marker_line_width,
         plot_width=plot_width,
         plot_height=plot_height,
-        output_backend=output_backend
     )
 
     return p
@@ -103,9 +116,12 @@ def plotCircular(
     color_discrete_map=None,
     size=15,
     hover_data=None,
+    output_backend='webgl',
+    marker="circle",
+    marker_line_color="black",
+    marker_line_width=1,
     plot_width=600,
     plot_height=600,
-    output_backend='webgl'
 ):
     """
     Plot a circular (radial) phylogenetic tree with optional metadata-based 
@@ -130,12 +146,19 @@ def plotCircular(
         Size of scatter points representing tree tips.
     hover_data : list of str, optional
         List of additional metadata columns to display in hover tooltips.
+    marker : str, default="circle"
+        Type of glyph marker for points. Options include:
+        'circle', 'square', 'hex', 'dot',
+    marker_line_color : str, default="black"
+        Outline color of glyph markers.
+    marker_line_width : int, default=1
+        Outline thickness of glyph markers.
+    output_backend : str, default='webgl'
+        Bokeh output backend. 'webgl' is recommended for better performance with many points.
     plot_width : int, default=600
         Width of the Bokeh plot in pixels.
     plot_height : int, default=600
         Height of the Bokeh plot in pixels.
-    output_backend : str, default='webgl'
-        Bokeh output backend. 'webgl' is recommended for better performance with many points.
 
     Returns
     -------
@@ -166,9 +189,12 @@ def plotCircular(
         color_discrete_map=color_discrete_map,
         size=size,
         hover_data=hover_data,
+        marker=marker,
+        marker_line_color=marker_line_color,
+        marker_line_width=marker_line_width,
+        output_backend=output_backend,
         plot_width=plot_width,
         plot_height=plot_height,
-        output_backend=output_backend
     )
 
     return p
@@ -273,6 +299,9 @@ def plotRectangularPoints(
     alpha=1,
     plot_width=800,
     plot_height=600,
+    marker="circle",
+    marker_line_color="black",
+    marker_line_width=1,
     hover_data=None,
     output_backend='webgl'
 ):
@@ -288,6 +317,9 @@ def plotRectangularPoints(
     df_metadata (pd.DataFrame or None): DataFrame with metadata for coloring
     color_column (str or None): Column name in df_metadata for coloring
     color_discrete_map (dict or None): Custom color mapping {value: color}
+    alpha (float): Alpha transparency of points. Default 1.
+    marker (str): Type of glyph marker. Options include:
+                  'circle', 'square', 'triangle', 'diamond',
     plot_width (int): Width of the plot if creating new figure
     plot_height (int): Height of the plot if creating new figure
     hover_data (list or None): Additional columns from metadata to show on hover
@@ -316,7 +348,7 @@ def plotRectangularPoints(
             data["x"].append(x_attr(k))
             data["y"].append(y_attr(k))
 
-    return plot_bokeh_scatter(p, data, hover_data, size, alpha)
+    return plot_bokeh_scatter(p=p, data=data, hover_data=hover_data, size=size, alpha=alpha, marker=marker, marker_line_color=marker_line_color, marker_line_width=marker_line_width)
 
 def plotCircularTree(
     tree_obj,
@@ -395,10 +427,13 @@ def plotCircularPoints(
     color_column=None,
     color_discrete_map=None,
     alpha=1,
+    marker="circle",
+    marker_line_color="black",
+    marker_line_width=1,
+    hover_data=None,
+    output_backend='webgl',
     plot_width=800,
     plot_height=800,
-    hover_data=None,
-    output_backend='webgl'
 ):
     """
     Plot points on a circular tree with interactive features and metadata support.
@@ -436,133 +471,35 @@ def plotCircularPoints(
     data["x"].extend(X.tolist())
     data["y"].extend(Y.tolist())
 
-    return plot_bokeh_scatter(p, data, hover_data, size, alpha)
+    return plot_bokeh_scatter(p=p, data=data, hover_data=hover_data, size=size, alpha=alpha, marker=marker,
+                             marker_line_color=marker_line_color, marker_line_width=marker_line_width)
 
 
-def extract_tree_arrays_points(tree_obj, x_attr, y_attr):
-    xs, ys, is_leaf = [], [], []
-    for k in tree_obj.Objects:
-        xs.append(x_attr(k))
-        ys.append(y_attr(k))
-        is_leaf.append(k.is_leaf())
-    return np.array(xs, dtype=np.float64), np.array(ys, dtype=np.float64), np.array(is_leaf, dtype=np.bool_)
-
-import numpy as np
-
-def extract_tree_arrays_trees(tree_obj, x_attr, y_attr):
-    n = len(tree_obj.Objects)
-    xs = np.empty(n, dtype=np.float64)
-    ys = np.empty(n, dtype=np.float64)
-    parent = np.full(n, -1, dtype=np.int32)       # -1 means no parent
-    is_node = np.zeros(n, dtype=np.bool_)
-    left_child = np.full(n, -1, dtype=np.int32)   # -1 means no child
-    right_child = np.full(n, -1, dtype=np.int32)
-
-    # Map each node object to its index
-    index_map = {k: i for i, k in enumerate(tree_obj.Objects)}
-
-    for i, k in enumerate(tree_obj.Objects):
-        xs[i] = x_attr(k)
-        ys[i] = y_attr(k)
-
-        # Assign parent index if it exists in the map
-        if k.parent is not None and k.parent in index_map:
-            parent[i] = index_map[k.parent]
-
-        # Assign children if it's an internal node
-        if k.is_node():
-            is_node[i] = True
-            if k.children:
-                left_child[i] = index_map.get(k.children[0], -1)
-                right_child[i] = index_map.get(k.children[-1], -1)
-
-    return xs, ys, parent, is_node, left_child, right_child
-
-@njit
-def compute_circular_segments(xs, ys, parent, is_node, left_child, right_child,
-                              tree_height, y_span, inwardSpace,
-                              circStart, circFrac, precision):
-    n = len(xs)
-    max_segments = n * (precision + 2)  # rough upper bound
-    seg_xs = []
-    seg_ys = []
-
-    if inwardSpace < 0:
-        inwardSpace -= tree_height
-
-    circ_s = circStart * math.pi * 2.0
-    circ = circFrac * math.pi * 2.0
-
-    min_x = xs.min()
-    max_x = xs.max()
-    denom = max_x - min_x
-
-    for i in range(n):
-        x = (xs[i] + inwardSpace - min_x) / denom
-        xp = x
-        if parent[i] != -1 and parent[parent[i]] != -1:
-            xp = (xs[parent[i]] + inwardSpace - min_x) / denom
-
-        y = circ_s + circ * ys[i] / y_span
-        X = math.sin(y)
-        Y = math.cos(y)
-
-        # Radial branch
-        seg_xs.append([X * xp, X * x])
-        seg_ys.append([Y * xp, Y * x])
-
-        # Curved connector
-        if is_node[i]:
-            yl = circ_s + circ * ys[left_child[i]] / y_span
-            yr = circ_s + circ * ys[right_child[i]] / y_span
-
-            for j in range(precision - 1):
-                t1 = yl + (yr - yl) * j / (precision - 1)
-                t2 = yl + (yr - yl) * (j + 1) / (precision - 1)
-                seg_xs.append([math.sin(t1) * x, math.sin(t2) * x])
-                seg_ys.append([math.cos(t1) * x, math.cos(t2) * x])
-
-    return seg_xs, seg_ys
-
-@njit
-def compute_circular_coords(xs, ys, is_leaf, tree_height, y_span, inwardSpace, circStart, circFrac):
-    n = len(xs)
-    Xs = []
-    Ys = []
-
-    # Adjust inward space
-    if inwardSpace < 0:
-        inwardSpace -= tree_height
-
-    circ_s = circStart * math.pi * 2.0
-    circ = circFrac * math.pi * 2.0
-
-    # Normalization
-    min_x = xs.min()
-    max_x = xs.max()
-    denom = max_x - min_x
-
-    for i in range(n):
-        if is_leaf[i]:
-            x = (xs[i] + inwardSpace - min_x) / denom
-            y = circ_s + circ * ys[i] / y_span
-            Xs.append(math.sin(y) * x)
-            Ys.append(math.cos(y) * x)
-
-    return np.array(Xs), np.array(Ys)
-
-def plot_bokeh_scatter(p, data, hover_data=None, size=8, alpha=0.8):
+def plot_bokeh_scatter(
+    p,
+    data,
+    hover_data=None,
+    size=8,
+    alpha=0.8,
+    marker="circle",  # glyph type
+    marker_line_color="black",  # outline color
+    marker_line_width=1,        # outline thickness
+):
     """
     Add scatter points with hover tooltips to a Bokeh figure.
     
     Parameters:
     p (bokeh.plotting.figure): Bokeh figure to add scatter to
     data (dict): Dictionary containing 'x', 'y', 'names', 'colors' and other data
-    color_column (str or None): Column name for color metadata
-    df_metadata (pd.DataFrame or None): Metadata dataframe 
     hover_data (list or None): List of additional column names for hover tooltips
     size (int or function): Size of scatter points. Default 8.
     alpha (float): Alpha transparency of points. Default 0.8.
+    marker (str): Type of glyph marker. Options include:
+                  'circle', 'square', 'triangle', 'diamond',
+                  'hex', 'cross', 'x', 'dot', etc.
+                  Default is 'circle'.
+    line_color (str): Outline color of glyphs. Default 'black'.
+    line_width (int): Outline thickness. Default 1.
     
     Returns:
     bokeh.plotting.figure: The figure with scatter points added
@@ -576,9 +513,17 @@ def plot_bokeh_scatter(p, data, hover_data=None, size=8, alpha=0.8):
             if col in data:
                 hover_tooltips.append((col, f"@{col}"))
 
-    # Plot points
+    # Plot points with chosen marker and outline
     renderer = p.scatter(
-        "x", "y", size=size, color="colors", source=source, alpha=alpha
+        "x",
+        "y",
+        size=size,
+        fill_color="colors",  # inside color
+        line_color=marker_line_color,  # outline color
+        line_width=marker_line_width,  # outline thickness
+        source=source,
+        alpha=alpha,
+        marker=marker,
     )
 
     hover = HoverTool(tooltips=hover_tooltips, renderers=[renderer])
@@ -681,3 +626,121 @@ def addText(tree_obj, p, target=None, x_attr=None, y_attr=None, text=None, **kwa
         p.text("x", "y", text="text", source=source, text_font_size="8pt")
 
     return p
+
+
+
+
+def extract_tree_arrays_points(tree_obj, x_attr, y_attr):
+    xs, ys, is_leaf = [], [], []
+    for k in tree_obj.Objects:
+        xs.append(x_attr(k))
+        ys.append(y_attr(k))
+        is_leaf.append(k.is_leaf())
+    return np.array(xs, dtype=np.float64), np.array(ys, dtype=np.float64), np.array(is_leaf, dtype=np.bool_)
+
+def extract_tree_arrays_trees(tree_obj, x_attr, y_attr):
+    n = len(tree_obj.Objects)
+    xs = np.empty(n, dtype=np.float64)
+    ys = np.empty(n, dtype=np.float64)
+    parent = np.full(n, -1, dtype=np.int32)       # -1 means no parent
+    is_node = np.zeros(n, dtype=np.bool_)
+    left_child = np.full(n, -1, dtype=np.int32)   # -1 means no child
+    right_child = np.full(n, -1, dtype=np.int32)
+
+    # Map each node object to its index
+    index_map = {k: i for i, k in enumerate(tree_obj.Objects)}
+
+    for i, k in enumerate(tree_obj.Objects):
+        xs[i] = x_attr(k)
+        ys[i] = y_attr(k)
+
+        # Assign parent index if it exists in the map
+        if k.parent is not None and k.parent in index_map:
+            parent[i] = index_map[k.parent]
+
+        # Assign children if it's an internal node
+        if k.is_node():
+            is_node[i] = True
+            if k.children:
+                left_child[i] = index_map.get(k.children[0], -1)
+                right_child[i] = index_map.get(k.children[-1], -1)
+
+    return xs, ys, parent, is_node, left_child, right_child
+
+@njit
+def compute_circular_segments(xs, ys, parent, is_node, left_child, right_child,
+                              tree_height, y_span, inwardSpace,
+                              circStart, circFrac, precision):
+    n = len(xs)
+    max_segments = n * (precision + 2)  # rough upper bound
+    seg_xs = []
+    seg_ys = []
+
+    if inwardSpace < 0:
+        inwardSpace -= tree_height
+
+    circ_s = circStart * math.pi * 2.0
+    circ = circFrac * math.pi * 2.0
+
+    min_x = xs.min()
+    max_x = xs.max()
+    denom = max_x - min_x
+
+    for i in range(n):
+        x = (xs[i] + inwardSpace - min_x) / denom
+        xp = x
+
+        # If node has a parent, use its radius
+        if parent[i] != -1:
+            xp = (xs[parent[i]] + inwardSpace - min_x) / denom
+        else:
+            # Root or unrooted center: start from the origin
+            xp = 0.0
+
+        y = circ_s + circ * ys[i] / y_span
+        X = math.sin(y)
+        Y = math.cos(y)
+
+        # Radial branch (now includes root → child)
+        seg_xs.append([X * xp, X * x])
+        seg_ys.append([Y * xp, Y * x])
+
+        # Curved connector for internal nodes
+        if is_node[i] and left_child[i] != -1 and right_child[i] != -1:
+            yl = circ_s + circ * ys[left_child[i]] / y_span
+            yr = circ_s + circ * ys[right_child[i]] / y_span
+
+            for j in range(precision - 1):
+                t1 = yl + (yr - yl) * j / (precision - 1)
+                t2 = yl + (yr - yl) * (j + 1) / (precision - 1)
+                seg_xs.append([math.sin(t1) * x, math.sin(t2) * x])
+                seg_ys.append([math.cos(t1) * x, math.cos(t2) * x])
+
+    return seg_xs, seg_ys
+
+@njit
+def compute_circular_coords(xs, ys, is_leaf, tree_height, y_span, inwardSpace, circStart, circFrac):
+    n = len(xs)
+    Xs = []
+    Ys = []
+
+    # Adjust inward space
+    if inwardSpace < 0:
+        inwardSpace -= tree_height
+
+    circ_s = circStart * math.pi * 2.0
+    circ = circFrac * math.pi * 2.0
+
+    # Normalization
+    min_x = xs.min()
+    max_x = xs.max()
+    denom = max_x - min_x
+
+    for i in range(n):
+        if is_leaf[i]:
+            x = (xs[i] + inwardSpace - min_x) / denom
+            y = circ_s + circ * ys[i] / y_span
+            Xs.append(math.sin(y) * x)
+            Ys.append(math.cos(y) * x)
+
+    return np.array(Xs), np.array(Ys)
