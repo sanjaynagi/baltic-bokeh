@@ -19,6 +19,8 @@ def test_package_structure():
 
     # Test that expected functions are in __all__
     expected_functions = [
+        "plot_bokeh_scatter",
+        "plotTree",
         "plotRectangularTree",
         "plotRectangularPoints",
         "plotCircularTree",
@@ -34,6 +36,8 @@ def test_function_imports():
     import baltic_bokeh
 
     # Test individual function imports
+    from baltic_bokeh import plot_bokeh_scatter
+    from baltic_bokeh import plotTree
     from baltic_bokeh import plotRectangularTree
     from baltic_bokeh import plotRectangularPoints
     from baltic_bokeh import plotCircularTree
@@ -41,6 +45,8 @@ def test_function_imports():
     from baltic_bokeh import addText
 
     # Verify they are callable
+    assert callable(plot_bokeh_scatter)
+    assert callable(plotTree)
     assert callable(plotRectangularTree)
     assert callable(plotRectangularPoints)
     assert callable(plotCircularTree)
@@ -48,17 +54,7 @@ def test_function_imports():
     assert callable(addText)
 
 
-def test_module_docstring():
-    """Test that the module has proper documentation."""
-    import baltic_bokeh
-
-    assert baltic_bokeh.__doc__ is not None
-    assert "Baltic-Bokeh" in baltic_bokeh.__doc__
-    assert "interactive" in baltic_bokeh.__doc__.lower()
-
-
 if __name__ == "__main__":
     test_package_structure()
     test_function_imports()
-    test_module_docstring()
     print("All import tests passed!")

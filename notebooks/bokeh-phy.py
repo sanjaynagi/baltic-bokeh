@@ -9,10 +9,15 @@ def _():
     import marimo as mo
     import baltic as bt
     import baltic_bokeh as bt_bokeh
+
     import pandas as pd
+    import numpy as np
 
     tree = bt.loadNewick("./examples/vgsc_focal.fasta.treefile")
     metadata = pd.read_csv("./examples/vgsc_focal.metadata.tsv", sep="\t")
+
+    # tree = bt.loadNewick("./examples/example.newick")
+    # metadata = pd.read_csv("./examples/example_metadata.tsv", sep="\t")#[:1000]
 
     import plotly.express as px
 
@@ -33,27 +38,43 @@ def _():
         "pwani":TAXON_PALETTE[9],
         "unassigned": "black",
     }
+    return TAXON_COLORS, bt_bokeh, metadata, tree
 
-    # Interactive plot with metadata coloring
-    p = bt_bokeh.plotCircular(
+
+@app.cell
+def _(TAXON_COLORS, bt_bokeh, metadata, tree):
+    p = bt_bokeh.plotTree(
         tree,
+        type='u',
         df_metadata=metadata,
         color_column="taxon",
         color_discrete_map=TAXON_COLORS,
         size=5,
         plot_width=1200,
         plot_height=1200,
-        hover_data=["sample_id", "taxon", "country"],
+        output_backend='webgl',
+        marker='hex',
+        marker_line_color='white',
+        marker_line_width=0,
+        hover_data=['taxon', 'country']
     )
+    return (p,)
+
+
+@app.cell
+def _(p):
+    p
     return
 
 
-app._unparsable_cell(
-    r"""
-     p
-    """,
-    name="_"
-)
+@app.cell
+def _():
+    # 750 secs for webgl - full focal vgsc
+
+    # 0.05 secs for 200 sample vgsc , webgl and canvas
+
+    # 0.48 secs canvas 1000, 0.39 webgl
+    return
 
 
 @app.cell

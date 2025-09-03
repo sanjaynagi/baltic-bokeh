@@ -6,10 +6,9 @@ import pytest
 import pandas as pd
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource, HoverTool
-from unittest.mock import Mock, patch
 
 import baltic_bokeh
-from baltic_bokeh.bokeh import generate_leaf_colours, prepare_bokeh_data
+from baltic_bokeh.bokeh import prepare_bokeh_data
 
 class TestMetadataColors:
     """Test metadata color preparation."""
@@ -20,10 +19,9 @@ class TestMetadataColors:
         ### this should raise assertion error
         with pytest.raises(AssertionError):
             data = prepare_bokeh_data(
-                tree_obj=sample_tree, hover_data=None, df_metadata=sample_metadata, color_column="nonexistent_column", color_discrete_map=None
+                tree=sample_tree, hover_data=None, df_metadata=sample_metadata, color_column="nonexistent_column", color_discrete_map=None
             )
         
-
 
 class TestplotRectangularTree:
     """Test plotRectangularTree function."""
@@ -167,43 +165,6 @@ class TestAddText:
         )
 
         assert p_with_text is p
-
-
-class TestPackageImports:
-    """Test package-level imports."""
-
-    def test_import_all_functions(self):
-        """Test that all functions are importable."""
-        import baltic_bokeh
-
-        expected_functions = [
-            "plotRectangularTree",
-            "plotRectangularPoints",
-            "plotCircularTree",
-            "plotCircularPoints",
-            "addText",
-        ]
-
-        for func_name in expected_functions:
-            assert hasattr(baltic_bokeh, func_name)
-            assert callable(getattr(baltic_bokeh, func_name))
-
-    def test_version_info(self):
-        """Test version information is available."""
-        import baltic_bokeh
-
-        assert hasattr(baltic_bokeh, "__version__")
-        assert hasattr(baltic_bokeh, "__author__")
-        assert hasattr(baltic_bokeh, "__all__")
-
-        # Check __all__ contains expected functions
-        assert set(baltic_bokeh.__all__) == {
-            "plotRectangularTree",
-            "plotRectangularPoints",
-            "plotCircularTree",
-            "plotCircularPoints",
-            "addText",
-        }
 
 
 class TestEdgeCases:

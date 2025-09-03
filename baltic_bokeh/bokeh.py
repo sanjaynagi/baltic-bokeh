@@ -14,33 +14,32 @@ from bokeh.palettes import Category10, Set3
 import numpy as np
 from numba import njit
 
-def plotRectangular(
+def plotTree(
     tree,
+    type="rectangular",  # "rectangular", "circular", "unrooted"
     df_metadata=None,
     color_column=None,
     color_discrete_map=None,
     size=15,
-    connection_type='baltic',
+    connection_type="baltic",  # only used for rectangular
     hover_data=None,
     marker="circle",
     marker_line_color="black",
     marker_line_width=1,
-    output_backend='webgl',
-    plot_width=600,
-    plot_height=600,
+    output_backend="webgl",
+    plot_width=800,
+    plot_height=800,
 ):
     """
-    Plot a rectangular phylogenetic tree with optional metadata-based coloring 
-    and interactive hover tooltips using Bokeh.
-
-    This function combines the base tree structure (via `plotRectangularTree`) 
-    with scatter points for leaves or nodes (via `plotRectangularPoints`), 
-    allowing integration of metadata for coloring and interactivity.
+    Plot a phylogenetic tree (rectangular, circular, or unrooted) with optional
+    metadata-based coloring and interactive hover tooltips using Bokeh.
 
     Parameters
     ----------
     tree : object
         A phylogenetic tree object with `.Objects` containing nodes/branches.
+    type : {"rectangular", "circular", "unrooted"}, default="rectangular"
+        Layout type for the tree.
     df_metadata : pandas.DataFrame, optional
         Metadata dataframe indexed by sample names. Used for coloring and hover info.
     color_column : str, optional
@@ -51,34 +50,33 @@ def plotRectangular(
     size : int, default=15
         Size of scatter points representing tree tips/nodes.
     connection_type : {"baltic", "direct"}, default="baltic"
-        Type of branch connection:
-        - "baltic": horizontal-vertical style (classic phylogenetic tree)
-        - "direct": straight-line connections between parent and child
+        Only used for rectangular layout.
     hover_data : list of str, optional
         List of additional metadata columns to display in hover tooltips.
     marker : str, default="circle"
         Type of glyph marker for points. Options include:
-        'circle', 'square', 'hex', 'dot',
+        'circle', 'square', 'hex', 'dot', etc.
     marker_line_color : str, default="black"
         Outline color of glyph markers.
     marker_line_width : int, default=1
         Outline thickness of glyph markers.
-    plot_width : int, default=600
-        Width of the Bokeh plot in pixels.
-    plot_height : int, default=600
-        Height of the Bokeh plot in pixels.
-    output_backend : str, default='webgl'
+    output_backend : str, default="webgl"
         Bokeh output backend. 'webgl' is recommended for better performance with many points.
+    plot_width : int, default=800
+        Width of the Bokeh plot in pixels.
+    plot_height : int, default=800
+        Height of the Bokeh plot in pixels.
 
     Returns
     -------
     bokeh.plotting.figure
-        A Bokeh figure object containing the interactive rectangular tree plot.
+        A Bokeh figure object containing the interactive tree plot.
 
     Examples
     --------
-    >>> p = plotRectangular(
+    >>> p = plotTree(
     ...     tree,
+    ...     type="unrooted",
     ...     df_metadata=metadata,
     ...     color_column="host",
     ...     hover_data=["location", "date"]
@@ -86,122 +84,89 @@ def plotRectangular(
     >>> from bokeh.io import show
     >>> show(p)
     """
-    p = plotRectangularTree(
-        tree, connection_type=connection_type, plot_width=plot_width, plot_height=plot_height, output_backend=output_backend
-    )
+    type = type.lower()
+    assert type in ["rectangular", "circular", "unrooted", "r", "c", "u"], f"Unknown tree type: {type}"
 
-    p = plotRectangularPoints(
-        tree,
-        p=p,
-        df_metadata=df_metadata,
-        color_column=color_column,
-        color_discrete_map=color_discrete_map,
-        size=size,
-        hover_data=hover_data,
-        output_backend=output_backend,
-        marker=marker,
-        marker_line_color=marker_line_color,
-        marker_line_width=marker_line_width,
-        plot_width=plot_width,
-        plot_height=plot_height,
-    )
+    if type == "rectangular" or type == 'r':
+        # Draw edges
+        p = plotRectangularTree(
+            tree,
+            connection_type=connection_type,
+            plot_width=plot_width,
+            plot_height=plot_height,
+            output_backend=output_backend,
+        )
+        # Add points
+        p = plotRectangularPoints(
+            tree,
+            p=p,
+            df_metadata=df_metadata,
+            color_column=color_column,
+            color_discrete_map=color_discrete_map,
+            size=size,
+            hover_data=hover_data,
+            output_backend=output_backend,
+            marker=marker,
+            marker_line_color=marker_line_color,
+            marker_line_width=marker_line_width,
+            plot_width=plot_width,
+            plot_height=plot_height,
+        )
 
-    return p
+    elif type == "circular" or type == 'c':
+        # Draw edges
+        p = plotCircularTree(
+            tree,
+            plot_width=plot_width,
+            plot_height=plot_height,
+            output_backend=output_backend,
+        )
+        # Add points
+        p = plotCircularPoints(
+            tree,
+            p=p,
+            df_metadata=df_metadata,
+            color_column=color_column,
+            color_discrete_map=color_discrete_map,
+            size=size,
+            hover_data=hover_data,
+            marker=marker,
+            marker_line_color=marker_line_color,
+            marker_line_width=marker_line_width,
+            output_backend=output_backend,
+            plot_width=plot_width,
+            plot_height=plot_height,
+        )
 
-
-def plotCircular(
-    tree,
-    df_metadata=None,
-    color_column=None,
-    color_discrete_map=None,
-    size=15,
-    hover_data=None,
-    output_backend='webgl',
-    marker="circle",
-    marker_line_color="black",
-    marker_line_width=1,
-    plot_width=600,
-    plot_height=600,
-):
-    """
-    Plot a circular (radial) phylogenetic tree with optional metadata-based 
-    coloring and interactive hover tooltips using Bokeh.
-
-    This function combines the circular tree layout (via `plotCircularTree`) 
-    with scatter points for leaves (via `plotCircularPoints`), allowing 
-    integration of metadata for coloring and interactivity.
-
-    Parameters
-    ----------
-    tree : object
-        A phylogenetic tree object with `.Objects` containing nodes/branches.
-    df_metadata : pandas.DataFrame, optional
-        Metadata dataframe indexed by sample names. Used for coloring and hover info.
-    color_column : str, optional
-        Column in `df_metadata` to use for coloring points.
-    color_discrete_map : dict, optional
-        Custom mapping of metadata values to colors, e.g. {"A": "red", "B": "blue"}.
-        If not provided, a default Bokeh palette is used.
-    size : int, default=15
-        Size of scatter points representing tree tips.
-    hover_data : list of str, optional
-        List of additional metadata columns to display in hover tooltips.
-    marker : str, default="circle"
-        Type of glyph marker for points. Options include:
-        'circle', 'square', 'hex', 'dot',
-    marker_line_color : str, default="black"
-        Outline color of glyph markers.
-    marker_line_width : int, default=1
-        Outline thickness of glyph markers.
-    output_backend : str, default='webgl'
-        Bokeh output backend. 'webgl' is recommended for better performance with many points.
-    plot_width : int, default=600
-        Width of the Bokeh plot in pixels.
-    plot_height : int, default=600
-        Height of the Bokeh plot in pixels.
-
-    Returns
-    -------
-    bokeh.plotting.figure
-        A Bokeh figure object containing the interactive circular tree plot.
-
-    Examples
-    --------
-    >>> p = plotCircular(
-    ...     tree,
-    ...     df_metadata=metadata,
-    ...     color_column="host",
-    ...     hover_data=["location", "date"]
-    ... )
-    >>> from bokeh.io import show
-    >>> show(p)
-    """
-    
-    p = plotCircularTree(
-        tree, plot_width=plot_width, plot_height=plot_height, output_backend=output_backend
-    )
-
-    p = plotCircularPoints(
-        tree,
-        p=p,
-        df_metadata=df_metadata,
-        color_column=color_column,
-        color_discrete_map=color_discrete_map,
-        size=size,
-        hover_data=hover_data,
-        marker=marker,
-        marker_line_color=marker_line_color,
-        marker_line_width=marker_line_width,
-        output_backend=output_backend,
-        plot_width=plot_width,
-        plot_height=plot_height,
-    )
+    elif type == "unrooted" or type == 'u':
+        # Draw edges
+        p, df_nodes = plotUnrootedTree(
+            tree,
+            plot_width=plot_width,
+            plot_height=plot_height,
+            output_backend=output_backend,
+        )
+        # Add points (only leaves)
+        p = plotUnrootedPoints(
+            tree,
+            p=p,
+            df_metadata=df_metadata,
+            color_column=color_column,
+            color_discrete_map=color_discrete_map,
+            size=size,
+            hover_data=hover_data,
+            marker=marker,
+            marker_line_color=marker_line_color,
+            marker_line_width=marker_line_width,
+            output_backend=output_backend,
+            plot_width=plot_width,
+            plot_height=plot_height,
+        )
 
     return p
-
 
 def plotRectangularTree(
-    tree_obj,
+    tree,
     p=None,
     connection_type='baltic',
     x_attr=lambda k: k.x,
@@ -215,7 +180,7 @@ def plotRectangularTree(
     Plot the tree using Bokeh with black lines.
 
     Parameters:
-    tree_obj: The tree object
+    tree: The tree object
     p (bokeh.plotting.figure or None): Bokeh figure to plot on. If None, creates new figure.
     connection_type (str): Connection type ('baltic', 'direct'). Default 'baltic'.
     x_attr (function or None): Function for x-coordinates. Default uses branch.x.
@@ -246,7 +211,7 @@ def plotRectangularTree(
     xs = []
     ys = []
 
-    for k in tree_obj.Objects:
+    for k in tree.Objects:
         x = x_attr(k)
         xp = x_attr(k.parent) if k.parent else x
         y = y_attr(k)
@@ -288,7 +253,7 @@ def plotRectangularTree(
 
 
 def plotRectangularPoints(
-    tree_obj,
+    tree,
     p=None,
     x_attr=None,
     y_attr=None,
@@ -309,7 +274,7 @@ def plotRectangularPoints(
     Plot points on the tree with interactive features and metadata support.
 
     Parameters:
-    tree_obj: The tree object
+    tree: The tree object
     p (bokeh.plotting.figure or None): Bokeh figure to plot on. If None, creates new figure.
     x_attr (function or None): Function for x-coordinates. Default uses branch.x.
     y_attr (function or None): Function for y-coordinates. Default uses branch.y.
@@ -342,8 +307,8 @@ def plotRectangularPoints(
         y_attr = lambda k: k.y
 
     # Collect point data
-    data, hover_data = prepare_bokeh_data(tree_obj, hover_data, df_metadata, color_column, color_discrete_map)
-    for k in tree_obj.Objects:
+    data, hover_data = prepare_bokeh_data(tree, hover_data, df_metadata, color_column, color_discrete_map)
+    for k in tree.Objects:
         if k.is_leaf():
             data["x"].append(x_attr(k))
             data["y"].append(y_attr(k))
@@ -351,7 +316,7 @@ def plotRectangularPoints(
     return plot_bokeh_scatter(p=p, data=data, hover_data=hover_data, size=size, alpha=alpha, marker=marker, marker_line_color=marker_line_color, marker_line_width=marker_line_width)
 
 def plotCircularTree(
-    tree_obj,
+    tree,
     p=None,
     x_attr=lambda k: k.x,
     y_attr=lambda k: k.y,
@@ -369,7 +334,7 @@ def plotCircularTree(
     Plot the tree in a circular layout using Bokeh with black lines.
 
     Parameters:
-    tree_obj: The tree object
+    tree: The tree object
     p (bokeh.plotting.figure or None): Bokeh figure to plot on. If None, creates new figure.
     x_attr (function or None): Function for x-coordinates. Default uses branch.x.
     y_attr (function or None): Function for y-coordinates. Default uses branch.y.
@@ -398,11 +363,11 @@ def plotCircularTree(
         p.ygrid.visible = False
 
 
-    xs, ys, parent, is_node, left_child, right_child = extract_tree_arrays_trees(tree_obj, x_attr, y_attr)
+    xs, ys, parent, is_node, left_child, right_child = extract_tree_arrays_trees(tree, x_attr, y_attr)
 
     seg_xs, seg_ys = compute_circular_segments(
         xs, ys, parent, is_node, left_child, right_child,
-        tree_obj.treeHeight, tree_obj.ySpan,
+        tree.treeHeight, tree.ySpan,
         inwardSpace, circStart, circFrac, precision
     )
 
@@ -414,7 +379,7 @@ def plotCircularTree(
 
 
 def plotCircularPoints(
-    tree_obj,
+    tree,
     p=None,
     x_attr=None,
     y_attr=None,
@@ -455,14 +420,14 @@ def plotCircularPoints(
     if y_attr is None:
         y_attr = lambda k: k.y
 
-    data, hover_data = prepare_bokeh_data(tree_obj, hover_data, df_metadata, color_column, color_discrete_map)
+    data, hover_data = prepare_bokeh_data(tree, hover_data, df_metadata, color_column, color_discrete_map)
 
-    xs, ys, is_leaf = extract_tree_arrays_points(tree_obj, x_attr, y_attr)
+    xs, ys, is_leaf = extract_tree_arrays_points(tree, x_attr, y_attr)
 
     X, Y = compute_circular_coords(
         xs, ys, is_leaf,
-        tree_height=tree_obj.treeHeight,
-        y_span=tree_obj.ySpan,
+        tree_height=tree.treeHeight,
+        y_span=tree.ySpan,
         inwardSpace=inwardSpace,
         circStart=circStart,
         circFrac=circFrac
@@ -575,7 +540,7 @@ def generate_leaf_colours(
 
     return colours
 
-def prepare_bokeh_data(tree_obj, hover_data, df_metadata, color_column, color_discrete_map):
+def prepare_bokeh_data(tree, hover_data, df_metadata, color_column, color_discrete_map):
     # Collect point data
     data = {"x": [], "y": []}
     if hover_data is None and df_metadata is not None:
@@ -592,13 +557,13 @@ def prepare_bokeh_data(tree_obj, hover_data, df_metadata, color_column, color_di
             df_metadata, color_column, color_discrete_map
         )
     elif color_column is None or df_metadata is None:
-        data['colors'] = np.repeat("black", np.sum([o.is_leaf() for o in tree_obj.Objects]))
+        data['colors'] = np.repeat("black", np.sum([o.is_leaf() for o in tree.Objects]))
 
 
     return data, hover_data
 
 
-def addText(tree_obj, p, target=None, x_attr=None, y_attr=None, text=None, **kwargs):
+def addText(tree, p, target=None, x_attr=None, y_attr=None, text=None, **kwargs):
     """
     Add text annotations to a bokeh tree plot.
 
@@ -616,7 +581,7 @@ def addText(tree_obj, p, target=None, x_attr=None, y_attr=None, text=None, **kwa
 
     data = {"x": [], "y": [], "text": []}
 
-    for k in filter(target, tree_obj.Objects):
+    for k in filter(target, tree.Objects):
         data["x"].append(x_attr(k))
         data["y"].append(y_attr(k))
         data["text"].append(text(k))
@@ -630,16 +595,16 @@ def addText(tree_obj, p, target=None, x_attr=None, y_attr=None, text=None, **kwa
 
 
 
-def extract_tree_arrays_points(tree_obj, x_attr, y_attr):
+def extract_tree_arrays_points(tree, x_attr, y_attr):
     xs, ys, is_leaf = [], [], []
-    for k in tree_obj.Objects:
+    for k in tree.Objects:
         xs.append(x_attr(k))
         ys.append(y_attr(k))
         is_leaf.append(k.is_leaf())
     return np.array(xs, dtype=np.float64), np.array(ys, dtype=np.float64), np.array(is_leaf, dtype=np.bool_)
 
-def extract_tree_arrays_trees(tree_obj, x_attr, y_attr):
-    n = len(tree_obj.Objects)
+def extract_tree_arrays_trees(tree, x_attr, y_attr):
+    n = len(tree.Objects)
     xs = np.empty(n, dtype=np.float64)
     ys = np.empty(n, dtype=np.float64)
     parent = np.full(n, -1, dtype=np.int32)       # -1 means no parent
@@ -648,9 +613,9 @@ def extract_tree_arrays_trees(tree_obj, x_attr, y_attr):
     right_child = np.full(n, -1, dtype=np.int32)
 
     # Map each node object to its index
-    index_map = {k: i for i, k in enumerate(tree_obj.Objects)}
+    index_map = {k: i for i, k in enumerate(tree.Objects)}
 
-    for i, k in enumerate(tree_obj.Objects):
+    for i, k in enumerate(tree.Objects):
         xs[i] = x_attr(k)
         ys[i] = y_attr(k)
 
@@ -744,3 +709,226 @@ def compute_circular_coords(xs, ys, is_leaf, tree_height, y_span, inwardSpace, c
             Ys.append(math.cos(y) * x)
 
     return np.array(Xs), np.array(Ys)
+
+def extract_tree_arrays_equal_angle(tree):
+    """
+    Extract arrays for equal-angles layout from a Baltic tree.
+    """
+    n = len(tree.Objects)
+    parent = np.full(n, -1, dtype=np.int32)
+    children = [[] for _ in range(n)]
+    branch_length = np.zeros(n, dtype=np.float64)
+    is_leaf = np.zeros(n, dtype=np.bool_)
+    names = []
+
+    index_map = {k: i for i, k in enumerate(tree.Objects)}
+
+    for i, k in enumerate(tree.Objects):
+        names.append(getattr(k, "name", str(i)))
+        branch_length[i] = getattr(k, "length", 1.0) or 1.0
+
+        # Only assign parent if it's in the map
+        if k.parent is not None and k.parent in index_map:
+            parent[i] = index_map[k.parent]
+
+        if k.is_leaf():
+            is_leaf[i] = True
+        else:
+            # Only keep children that are in Objects
+            children[i] = [index_map[c] for c in k.children if c in index_map]
+
+    return parent, children, branch_length, is_leaf, names
+
+from numba import njit
+
+@njit
+def count_leaves_numba(node, children_idx, children_ptr, is_leaf):
+    """Count descendant leaves of a node (recursive)."""
+    if is_leaf[node]:
+        return 1
+    total = 0
+    for j in range(children_ptr[node], children_ptr[node+1]):
+        child = children_idx[j]
+        total += count_leaves_numba(child, children_idx, children_ptr, is_leaf)
+    return total
+
+@njit
+def layout_equal_angle_numba(
+    root,
+    parent,
+    children_idx,
+    children_ptr,
+    branch_length,
+    is_leaf,
+    center_x=0.0,
+    center_y=0.0,
+    arc_start=0.0,
+    arc_stop=2*np.pi,
+):
+    n = len(parent)
+    xs = np.zeros(n, dtype=np.float64)
+    ys = np.zeros(n, dtype=np.float64)
+
+    # We'll store edges in Python list (Numba supports append of tuples of floats)
+    edges = []
+
+    # Stack: fixed-size tuples
+    stack = [(root, center_x, center_y, arc_start, arc_stop)]
+
+    while stack:
+        node, x, y, arc_s, arc_e = stack.pop()
+        xs[node] = x
+        ys[node] = y
+
+        if not is_leaf[node]:
+            # number of children
+            n_children = children_ptr[node+1] - children_ptr[node]
+            counts = np.zeros(n_children, dtype=np.int32)
+            child_ids = np.zeros(n_children, dtype=np.int32)
+
+            # compute leaf counts
+            for k in range(n_children):
+                child = children_idx[children_ptr[node] + k]
+                child_ids[k] = child
+                counts[k] = count_leaves_numba(child, children_idx, children_ptr, is_leaf)
+
+            total_leaves = counts.sum()
+
+            arc_size = arc_e - arc_s
+            child_arc_start = arc_s
+            for k in range(n_children):
+                child = child_ids[k]
+                c_count = counts[k]
+
+                child_arc_size = arc_size * c_count / total_leaves
+                child_arc_stop = child_arc_start + child_arc_size
+                child_angle = child_arc_start + child_arc_size / 2
+
+                dist = branch_length[child]
+                child_x = x + dist * np.sin(child_angle)
+                child_y = y + dist * np.cos(child_angle)
+
+                edges.append((x, y, child_x, child_y))
+
+                stack.append((child, child_x, child_y, child_arc_start, child_arc_stop))
+                child_arc_start = child_arc_stop
+
+    return xs, ys, edges
+
+def layout_equal_angle_baltic(tree, center_x=0.0, center_y=0.0):
+    parent, children, branch_length, is_leaf, names = extract_tree_arrays_equal_angle(tree)
+
+    # Flatten children into CSR-like structure
+    children_idx = np.array([c for sub in children for c in sub], dtype=np.int32)
+    children_ptr = np.zeros(len(children)+1, dtype=np.int32)
+    for i in range(len(children)):
+        children_ptr[i+1] = children_ptr[i] + len(children[i])
+
+    root = tree.Objects.index(tree.root)
+
+    xs, ys, edges = layout_equal_angle_numba(
+        root, parent, children_idx, children_ptr, branch_length, is_leaf
+    )
+
+    df_nodes = pd.DataFrame({
+        "x": xs,
+        "y": ys,
+        "id": names,
+        "is_leaf": is_leaf
+    })
+    df_edges = pd.DataFrame(edges, columns=["x0", "y0", "x1", "y1"])
+
+    return df_nodes, df_edges
+
+def plotUnrootedTree(
+    tree,
+    p=None,
+    width=2,
+    plot_width=800,
+    plot_height=800,
+    output_backend="webgl",
+):
+    """
+    Plot an unrooted phylogenetic tree using the Equal Angles algorithm.
+    """
+    df_nodes, df_edges = layout_equal_angle_baltic(tree)
+
+    if p is None:
+        p = figure(
+            width=plot_width,
+            height=plot_height,
+            title="Unrooted Phylogenetic Tree",
+            tools="pan,wheel_zoom,box_zoom,reset,save",
+            output_backend=output_backend,
+        )
+        p.axis.visible = False
+        p.xgrid.visible = False
+        p.ygrid.visible = False
+
+    # Draw edges
+    if not df_edges.empty:
+        source_edges = ColumnDataSource(df_edges)
+        p.segment(
+            x0="x0",
+            y0="y0",
+            x1="x1",
+            y1="y1",
+            line_color="black",
+            line_width=width,
+            source=source_edges,
+        )
+
+    return p, df_nodes
+
+def plotUnrootedPoints(
+    tree,
+    p=None,
+    df_metadata=None,
+    color_column=None,
+    color_discrete_map=None,
+    size=10,
+    alpha=1,
+    marker="circle",
+    marker_line_color="black",
+    marker_line_width=1,
+    hover_data=None,
+    output_backend="webgl",
+    plot_width=800,
+    plot_height=800,
+):
+    """
+    Plot points on an unrooted tree with metadata coloring and hover tooltips.
+    Only leaf nodes are plotted.
+    """
+    # Get layout
+    df_nodes, df_edges = layout_equal_angle_baltic(tree)
+
+    # Filter to leaves only
+    df_leaves = df_nodes[df_nodes["is_leaf"]].copy()
+
+    if p is None:
+        p = figure(
+            width=plot_width,
+            height=plot_height,
+            title="Unrooted Tree Points",
+            tools="pan,wheel_zoom,box_zoom,reset,save",
+            output_backend=output_backend,
+        )
+        p.axis.visible = False
+        p.xgrid.visible = False
+        p.ygrid.visible = False
+
+    data, hover_data = prepare_bokeh_data(tree, hover_data, df_metadata, color_column, color_discrete_map)
+    data['x'] = df_leaves["x"].values
+    data['y'] = df_leaves['y'].values
+
+    return plot_bokeh_scatter(
+        p=p,
+        data=data,
+        hover_data=hover_data,
+        size=size,
+        alpha=alpha,
+        marker=marker,
+        marker_line_color=marker_line_color,
+        marker_line_width=marker_line_width,
+    )
