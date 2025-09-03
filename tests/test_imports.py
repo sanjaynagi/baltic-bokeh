@@ -31,31 +31,21 @@ def test_package_structure():
 
 def test_function_imports():
     """Test that all functions can be imported."""
-    try:
-        import baltic_bokeh
+    import baltic_bokeh
 
-        # Test individual function imports
-        from baltic_bokeh import plotRectangularTree
-        from baltic_bokeh import plotRectangularPoints
-        from baltic_bokeh import plotCircularTree
-        from baltic_bokeh import plotCircularPoints
-        from baltic_bokeh import addText
+    # Test individual function imports
+    from baltic_bokeh import plotRectangularTree
+    from baltic_bokeh import plotRectangularPoints
+    from baltic_bokeh import plotCircularTree
+    from baltic_bokeh import plotCircularPoints
+    from baltic_bokeh import addText
 
-        # Verify they are callable
-        assert callable(plotRectangularTree)
-        assert callable(plotRectangularPoints)
-        assert callable(plotCircularTree)
-        assert callable(plotCircularPoints)
-        assert callable(addText)
-
-    except ImportError as e:
-        # If dependencies are missing, that's expected in minimal environment
-        if "baltic" in str(e) or "bokeh" in str(e) or "pandas" in str(e):
-            import pytest
-
-            pytest.skip(f"Skipping due to missing dependency: {e}")
-        else:
-            raise
+    # Verify they are callable
+    assert callable(plotRectangularTree)
+    assert callable(plotRectangularPoints)
+    assert callable(plotCircularTree)
+    assert callable(plotCircularPoints)
+    assert callable(addText)
 
 
 def test_module_docstring():
