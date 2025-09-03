@@ -6,10 +6,9 @@ import pytest
 import pandas as pd
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource, HoverTool
-from unittest.mock import Mock, patch
 
 import baltic_bokeh
-from baltic_bokeh.bokeh import generate_leaf_colours, prepare_bokeh_data
+from baltic_bokeh.bokeh import prepare_bokeh_data
 
 class TestMetadataColors:
     """Test metadata color preparation."""
@@ -23,7 +22,6 @@ class TestMetadataColors:
                 tree_obj=sample_tree, hover_data=None, df_metadata=sample_metadata, color_column="nonexistent_column", color_discrete_map=None
             )
         
-
 
 class TestplotRectangularTree:
     """Test plotRectangularTree function."""

@@ -11,10 +11,10 @@ from bokeh.plotting import show, output_file
 
 def main():
     # Load tree file
-    tree = bt.loadNewick("./example.newick")
+    tree = bt.loadNewick("./vgsc_focal.fasta.treefile")
 
     # Load metadata
-    metadata = pd.read_csv("./example_metadata.tsv", sep="\t", index_col=0)
+    metadata = pd.read_csv("./vgsc_focal.metadata.tsv", sep="\t", index_col=0)
 
     # Define color palette
     TAXON_COLORS = {
@@ -28,7 +28,7 @@ def main():
 
     # Create interactive circular tree plot
     p = baltic_bokeh.plotCircularTree(
-        tree, df_metadata=None, color_column=None, plot_width=800, plot_height=800
+        tree, plot_width=800, plot_height=800
     )
 
     # Add interactive points with metadata coloring
@@ -36,11 +36,11 @@ def main():
         tree,
         p=p,
         df_metadata=metadata,
-        color_column="species",
+        color_column="taxon",
         color_discrete_map=TAXON_COLORS,
         plot_width=800,
         plot_height=800,
-        hover_data=metadata.columns.tolist(),
+        hover_data=['taxon', 'country', 'year'],
     )
 
     # Save and show the plot
